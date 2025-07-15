@@ -288,6 +288,18 @@
                             </div>
                         </div>
                         <div class="space-y-8">
+                            <!-- Generador Automático de Horario -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="wand-2" class="w-5 h-5"></i> Generador Automático de Horario</h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div><label class="block text-sm font-medium">Hora inicio</label><input type="time" id="gen-start-time" value="08:00" class="w-full p-2 border rounded-md"></div>
+                                    <div><label class="block text-sm font-medium">Hora fin</label><input type="time" id="gen-end-time" value="17:00" class="w-full p-2 border rounded-md"></div>
+                                    <div><label class="block text-sm font-medium">Duración clase (min)</label><input type="number" id="gen-class-duration" value="55" class="w-full p-2 border rounded-md"></div>
+                                    <div><label class="block text-sm font-medium">Duración descanso (min)</label><input type="number" id="gen-break-duration" value="30" class="w-full p-2 border rounded-md"></div>
+                                    <div class="col-span-2"><label class="block text-sm font-medium">Hora inicio descanso (opcional)</label><input type="time" id="gen-break-start" value="11:00" class="w-full p-2 border rounded-md"></div>
+                                </div>
+                                <button data-action="generate-schedule-slots" class="mt-4 w-full bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center justify-center gap-2">Generar Franjas</button>
+                            </div>
                             <!-- Gestión de Franjas Horarias -->
                             <div class="bg-white p-6 rounded-lg shadow-md">
                                 <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> Franjas Horarias</h3>
@@ -348,8 +360,8 @@
                     </div>
                     <div class="grid md:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
-                            <div><label class="block text-lg font-semibold mb-2 text-gray-700">Planificación para hoy</label><textarea data-action="planned-change" placeholder="Ejercicios, teoría, actividades..." class="w-full p-2 border rounded-md h-32">${entry.planned}</textarea></div>
-                            <div><label class="block text-lg font-semibold mb-2 text-gray-700">Resumen de lo hecho</label><textarea data-action="completed-change" placeholder="¿Qué se ha hecho finalmente?" class="w-full p-2 border rounded-md h-32">${entry.completed}</textarea></div>
+                            <div><label class="block text-lg font-semibold mb-2 text-gray-700">Planificación para hoy</label><textarea data-action="planned-change" placeholder="Ejercicios, teoría, actividades..." class="w-full p-2 border rounded-md h-32">${entry.planned || ''}</textarea></div>
+                            <div><label class="block text-lg font-semibold mb-2 text-gray-700">Resumen de lo hecho</label><textarea data-action="completed-change" placeholder="¿Qué se ha hecho finalmente?" class="w-full p-2 border rounded-md h-32">${entry.completed || ''}</textarea></div>
                         </div>
                         <div class="bg-white p-6 rounded-lg shadow-md">
                             <h3 class="text-lg font-semibold mb-3">Anotaciones de Alumnos</h3>
@@ -395,6 +407,7 @@
                 case 'import-students':
                 case 'select-activity':
                 case 'back-to-schedule':
+                case 'generate-schedule-slots':
                     if (actionHandlers[action]) actionHandlers[action](id, element);
                     render();
                     break;
@@ -512,11 +525,69 @@
                 const currentSlot = state.timeSlots[index];
                 const otherSlot = state.timeSlots[otherIndex];
 
-                // Swap order values
                 [currentSlot.order, otherSlot.order] = [otherSlot.order, currentSlot.order];
                 
-                // Sort array by new order
                 state.timeSlots.sort((a, b) => a.order - b.order);
+                saveState();
+            },
+            'generate-schedule-slots': () => {
+                const startTimeStr = document.getElementById('gen-start-time').value;
+                const endTimeStr = document.getElementById('gen-end-time').value;
+                const classDuration = parseInt(document.getElementById('gen-class-duration').value, 10);
+                const breakDuration = parseInt(document.getElementById('gen-break-duration').value, 10);
+                const breakStartTimeStr = document.getElementById('gen-break-start').value;
+
+                if (!startTimeStr || !endTimeStr || isNaN(classDuration)) {
+                    alert('Por favor, rellena la hora de inicio, fin y la duración de la clase.');
+                    return;
+                }
+
+                const timeToMinutes = (timeStr) => {
+                    const [h, m] = timeStr.split(':').map(Number);
+                    return h * 60 + m;
+                };
+                const minutesToTime = (totalMinutes) => {
+                    const h = Math.floor(totalMinutes / 60).toString().padStart(2, '0');
+                    const m = (totalMinutes % 60).toString().padStart(2, '0');
+                    return `${h}:${m}`;
+                };
+
+                const startMinutes = timeToMinutes(startTimeStr);
+                const endMinutes = timeToMinutes(endTimeStr);
+                const breakStartMinutes = breakStartTimeStr ? timeToMinutes(breakStartTimeStr) : -1;
+
+                const newTimeSlots = [];
+                let currentTime = startMinutes;
+                let order = 0;
+                let breakAdded = false;
+
+                while (currentTime < endMinutes) {
+                    // Add break if it's time and it hasn't been added yet
+                    if (breakDuration > 0 && breakStartMinutes !== -1 && currentTime >= breakStartMinutes && !breakAdded) {
+                        const breakEndTime = currentTime + breakDuration;
+                        if (breakEndTime > endMinutes) break;
+                        newTimeSlots.push({
+                            id: crypto.randomUUID(),
+                            label: `${minutesToTime(currentTime)}-${minutesToTime(breakEndTime)}`,
+                            order: order++
+                        });
+                        currentTime = breakEndTime;
+                        breakAdded = true;
+                        continue;
+                    }
+
+                    // Add class slot
+                    const classEndTime = currentTime + classDuration;
+                    if (classEndTime > endMinutes) break;
+                     newTimeSlots.push({
+                        id: crypto.randomUUID(),
+                        label: `${minutesToTime(currentTime)}-${minutesToTime(classEndTime)}`,
+                        order: order++
+                    });
+                    currentTime = classEndTime;
+                }
+                
+                state.timeSlots = newTimeSlots;
                 saveState();
             },
             // --- Schedule Actions ---
@@ -562,7 +633,7 @@
                 const activity = state.activities.find(a => a.id === targetClassId);
                 if (!activity || studentListText.trim() === '') return alert("Selecciona una clase y pega una lista de alumnos.");
 
-                const names = studentListText.trim().split('\\n').filter(name => name.trim() !== '');
+                const names = studentListText.trim().split('\n').filter(name => name.trim() !== '');
                 const newStudentIds = [];
                 names.forEach(name => {
                     const newStudent = { id: crypto.randomUUID(), name: name.trim(), generalNotes: '' };
