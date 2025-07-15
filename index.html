@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cuaderno del Profesor</title>
+    <title>Cuaderno del Profesor (Local)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -13,6 +13,13 @@
         body { font-family: 'Inter', sans-serif; }
         .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Evitar que el número en input[type=number] tenga flechas */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { 
+          -webkit-appearance: none; 
+          margin: 0; 
+        }
+        input[type=number] { -moz-appearance: textfield; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -40,10 +47,6 @@
                     </button>
                 </div>
             </div>
-            <div class="text-xs text-gray-400 p-2 break-words">
-                <span class="font-semibold">ID de Sesión:</span>
-                <span id="session-id">Cargando...</span>
-            </div>
         </nav>
 
         <!-- Contenido Principal -->
@@ -66,112 +69,70 @@
     </div>
 
 
-    <script type="module">
-        // --- IMPORTS DE FIREBASE ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, addDoc, deleteDoc, writeBatch, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-teacher-app-html';
-        
-        let db, auth;
+    <script>
+        // --- ESTADO GLOBAL Y LÓGICA DE DATOS ---
         const state = {
-            userId: null,
-            isAuthReady: false,
             activeView: 'schedule',
             activities: [],
             students: [],
             timeSlots: [],
             schedule: {},
+            classEntries: {},
             selectedActivity: null,
-            unsubscribe: []
+            editingStudentId: null,
         };
 
-        const mainContent = document.getElementById('main-content');
-        const sessionIdEl = document.getElementById('session-id');
-        const navButtons = document.querySelectorAll('.nav-button');
-        
-        // --- MODAL ---
-        const modalContainer = document.getElementById('modal-container');
-        const modalTitle = document.getElementById('modal-title');
-        const modalBody = document.getElementById('modal-body');
-        const modalCloseBtn = document.getElementById('modal-close-btn');
-
-        const showModal = (title, content, onConfirm) => {
-            modalTitle.textContent = title;
-            modalBody.innerHTML = ''; // Clear previous content
-            
-            const contentDiv = document.createElement('div');
-            contentDiv.innerHTML = content;
-            modalBody.appendChild(contentDiv);
-            
-            const confirmButton = contentDiv.querySelector('.modal-confirm-btn');
-            const cancelButton = contentDiv.querySelector('.modal-cancel-btn');
-
-            const close = () => modalContainer.classList.add('hidden');
-
-            if (confirmButton && onConfirm) {
-                confirmButton.onclick = () => {
-                    onConfirm();
-                    close();
-                };
-            }
-            if (cancelButton) {
-                cancelButton.onclick = close;
-            }
-            modalCloseBtn.onclick = close;
-            modalContainer.classList.remove('hidden');
-        };
-
-        // --- LÓGICA DE LA APLICACIÓN ---
-
-        function updateNavButtons() {
-            navButtons.forEach(btn => {
-                const view = btn.dataset.view;
-                if (view === state.activeView) {
-                    btn.classList.add('bg-blue-600', 'text-white');
-                    btn.classList.remove('text-gray-600', 'hover:bg-gray-200', 'hover:text-gray-900');
-                } else {
-                    btn.classList.remove('bg-blue-600', 'text-white');
-                    btn.classList.add('text-gray-600', 'hover:bg-gray-200', 'hover:text-gray-900');
-                }
-            });
+        function saveState() {
+            const dataToSave = {
+                activities: state.activities,
+                students: state.students,
+                timeSlots: state.timeSlots,
+                schedule: state.schedule,
+                classEntries: state.classEntries,
+            };
+            localStorage.setItem('teacherDashboardData', JSON.stringify(dataToSave));
         }
 
-        function render() {
-            if (!state.isAuthReady) {
-                mainContent.innerHTML = `<div class="p-6">Cargando aplicación...</div>`;
-                return;
+        function loadState() {
+            const savedData = localStorage.getItem('teacherDashboardData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                state.activities = parsedData.activities || [];
+                state.students = parsedData.students || [];
+                state.timeSlots = parsedData.timeSlots || [];
+                state.schedule = parsedData.schedule || {};
+                state.classEntries = parsedData.classEntries || {};
             }
-            if (!db || !state.userId) {
-                mainContent.innerHTML = `<div class="p-6 text-red-500">Error: No se pudo conectar a la base de datos.</div>`;
-                return;
-            }
+        }
 
+        // --- LÓGICA DE RENDERIZADO ---
+        const mainContent = document.getElementById('main-content');
+        const navButtons = document.querySelectorAll('.nav-button');
+
+        function render() {
             mainContent.innerHTML = ''; // Limpiar vista anterior
             let viewContent = '';
 
             switch (state.activeView) {
-                case 'schedule':
-                    viewContent = renderScheduleView();
-                    break;
-                case 'students':
-                    viewContent = renderStudentsView();
-                    break;
-                case 'settings':
-                    viewContent = renderSettingsView();
-                    break;
-                case 'activityDetail':
-                    viewContent = renderActivityDetailView();
-                    break;
-                default:
-                    viewContent = renderScheduleView();
+                case 'schedule': viewContent = renderScheduleView(); break;
+                case 'students': viewContent = renderStudentsView(); break;
+                case 'settings': viewContent = renderSettingsView(); break;
+                case 'activityDetail': viewContent = renderActivityDetailView(); break;
+                default: viewContent = renderScheduleView();
             }
             mainContent.innerHTML = `<div class="animate-fade-in">${viewContent}</div>`;
-            lucide.createIcons(); // Re-render icons
+            lucide.createIcons();
             attachEventListeners();
+        }
+
+        function updateNavButtons() {
+            navButtons.forEach(btn => {
+                const view = btn.dataset.view;
+                btn.classList.toggle('bg-blue-600', view === state.activeView);
+                btn.classList.toggle('text-white', view === state.activeView);
+                btn.classList.toggle('text-gray-600', view !== state.activeView);
+                btn.classList.toggle('hover:bg-gray-200', view !== state.activeView);
+            });
         }
 
         // --- VISTAS (Templates HTML) ---
@@ -184,7 +145,7 @@
                 const cells = days.map(day => {
                     const activityId = state.schedule[`${day}-${time.label}`];
                     const activityInfo = activityId ? getActivityById(activityId) : null;
-                    let cellContent = `<div class="p-2 h-full"></div>`;
+                    let cellContent = `<div class="p-2 h-full min-h-[40px]"></div>`;
                     if (activityInfo) {
                         if (activityInfo.type === 'class') {
                             cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${day}' data-time='${time.label}' class="w-full h-full p-2 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors text-sm font-semibold">${activityInfo.name}</button>`;
@@ -203,20 +164,57 @@
                     <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
                         <table class="w-full border-collapse text-center">
                             <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${days.map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
-                            <tbody>${tableRows}</tbody>
+                            <tbody>${tableRows.length > 0 ? tableRows : '<tr><td colspan="6" class="p-4 text-gray-500">Añada franjas horarias en Configuración.</td></tr>'}</tbody>
                         </table>
                     </div>
-                </div>
-            `;
+                </div>`;
         }
         
         function renderStudentsView() {
-            // Implementar vista de alumnos
-            return `<div class="p-6">Vista de Alumnos no implementada aún.</div>`;
+            const studentsHtml = state.students.sort((a,b) => a.name.localeCompare(b.name)).map(student => {
+                if (state.editingStudentId === student.id) {
+                    return `
+                        <div class="p-4 border rounded-md bg-white space-y-3">
+                            <input type="text" data-action="edit-student-name-input" data-id="${student.id}" value="${student.name}" class="w-full p-2 border rounded-md">
+                            <textarea data-action="edit-student-notes-input" data-id="${student.id}" placeholder="Anotaciones generales sobre el alumno" class="w-full p-2 border rounded-md h-24">${student.generalNotes || ''}</textarea>
+                            <div class="flex gap-2">
+                                <button data-action="save-student" data-id="${student.id}" class="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm flex items-center gap-1"><i data-lucide="save" class="w-4 h-4"></i> Guardar</button>
+                                <button data-action="cancel-edit-student" class="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 text-sm">Cancelar</button>
+                            </div>
+                        </div>`;
+                }
+                return `
+                    <div class="p-4 border rounded-md bg-gray-50 flex justify-between items-center">
+                        <div>
+                            <p class="font-semibold text-gray-800">${student.name}</p>
+                            <p class="text-sm text-gray-500 italic mt-1">${student.generalNotes || "Sin anotaciones generales."}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button data-action="edit-student" data-id="${student.id}" class="text-blue-600 hover:text-blue-800">Editar</button>
+                            <button data-action="delete-student" data-id="${student.id}" class="text-red-600 hover:text-red-800"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>`;
+            }).join('');
+
+            return `
+                <div class="p-6 bg-gray-50 min-h-full">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Gestión de Alumnos</h2>
+                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+                        <h3 class="text-lg font-semibold mb-3">Añadir Nuevo Alumno</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="new-student-name" placeholder="Nombre completo del alumno" class="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-blue-500"/>
+                            <button data-action="add-student" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"><i data-lucide="plus-circle" class="w-5 h-5"></i> Añadir</button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md">
+                        <h3 class="text-lg font-semibold mb-3">Lista de Alumnos</h3>
+                        <div class="space-y-3">${studentsHtml.length > 0 ? studentsHtml : '<p class="text-gray-500">No hay alumnos registrados.</p>'}</div>
+                    </div>
+                </div>`;
         }
 
         function renderSettingsView() {
-            const activitiesHtml = state.activities.map(act => `
+             const activitiesHtml = state.activities.map(act => `
                 <div class="p-4 border rounded-md">
                     <div class="flex justify-between items-center">
                         <span class="font-semibold">${act.name} <span class="text-xs text-gray-500 font-normal">(${act.type === 'class' ? 'Clase' : 'General'})</span></span>
@@ -279,7 +277,15 @@
                                 </div>
                                 <div class="space-y-3 max-h-96 overflow-y-auto pr-2">${activitiesHtml}</div>
                             </div>
-                            <!-- Más secciones aquí -->
+                             <!-- Importación Rápida -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clipboard-paste" class="w-5 h-5"></i> Importación Rápida de Alumnos</h3>
+                                <div class="space-y-4">
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">1. Selecciona la clase de destino</label><select id="import-target-class" class="w-full p-2 border rounded-md"><option value="">-- Elige una clase --</option>${state.activities.filter(a => a.type === 'class').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">2. Pega la lista de alumnos</label><textarea id="student-list-text" placeholder="Juan Pérez\\nMaría García\\n..." class="w-full p-2 border rounded-md h-32"></textarea></div>
+                                    <button data-action="import-students" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2"><i data-lucide="upload" class="w-5 h-5"></i> Importar Alumnos</button>
+                                </div>
+                            </div>
                         </div>
                         <div class="space-y-8">
                             <!-- Gestión de Franjas Horarias -->
@@ -302,6 +308,18 @@
                                 </div>
                                 <button data-action="save-schedule" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 w-full flex items-center justify-center gap-2"><i data-lucide="save" class="w-5 h-5"></i> Guardar Horario</button>
                             </div>
+                             <!-- Copia de Seguridad y Zona de Peligro -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3">Copia de Seguridad</h3>
+                                <div class="flex gap-4">
+                                    <button data-action="export-data" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"><i data-lucide="download" class="w-5 h-5"></i> Exportar</button>
+                                    <label class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2 cursor-pointer"><i data-lucide="upload" class="w-5 h-5"></i> Importar<input type="file" id="import-file-input" accept=".json" class="hidden"/></label>
+                                </div>
+                            </div>
+                            <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
+                                <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> Zona de Peligro</h3>
+                                <button data-action="delete-all-data" class="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center gap-2"><i data-lucide="trash-2" class="w-5 h-5"></i> Borrar todos los datos</button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -309,172 +327,343 @@
         }
 
         function renderActivityDetailView() {
-            return `<div class="p-6">Vista de Detalle de Actividad no implementada aún.</div>`;
+            const { name, day, time } = state.selectedActivity;
+            const today = new Date().toISOString().split('T')[0];
+            const entryId = `${state.selectedActivity.id}_${today}`;
+            const entry = state.classEntries[entryId] || { planned: '', completed: '', annotations: {} };
+            const studentsInClass = state.students.filter(s => state.selectedActivity.studentIds?.includes(s.id));
+
+            const annotationsHtml = studentsInClass.length > 0 ? studentsInClass.map(student => `
+                <div key="${student.id}">
+                    <label class="block font-medium text-gray-700">${student.name}</label>
+                    <input type="text" data-action="annotation-change" data-student-id="${student.id}" value="${entry.annotations?.[student.id] || ''}" placeholder="Comportamiento, dudas, trabajo..." class="w-full p-2 border rounded-md mt-1"/>
+                </div>
+            `).join('') : '<p class="text-gray-500">No hay alumnos asignados a esta clase.</p>';
+
+            return `
+                <div class="p-6 bg-gray-50 min-h-full">
+                    <div class="flex justify-between items-center mb-6">
+                        <div><h2 class="text-2xl font-bold text-gray-800">${name}</h2><p class="text-gray-500">${day}, ${time} - ${today}</p></div>
+                        <button data-action="back-to-schedule" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300">Volver al horario</button>
+                    </div>
+                    <div class="grid md:grid-cols-2 gap-6">
+                        <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
+                            <div><label class="block text-lg font-semibold mb-2 text-gray-700">Planificación para hoy</label><textarea data-action="planned-change" placeholder="Ejercicios, teoría, actividades..." class="w-full p-2 border rounded-md h-32">${entry.planned}</textarea></div>
+                            <div><label class="block text-lg font-semibold mb-2 text-gray-700">Resumen de lo hecho</label><textarea data-action="completed-change" placeholder="¿Qué se ha hecho finalmente?" class="w-full p-2 border rounded-md h-32">${entry.completed}</textarea></div>
+                        </div>
+                        <div class="bg-white p-6 rounded-lg shadow-md">
+                            <h3 class="text-lg font-semibold mb-3">Anotaciones de Alumnos</h3>
+                            <div class="space-y-4 max-h-96 overflow-y-auto pr-2">${annotationsHtml}</div>
+                        </div>
+                    </div>
+                    <div class="mt-6"><button data-action="save-class-entry" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-lg"><i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios de la Sesión</button></div>
+                </div>
+            `;
         }
 
-        // --- MANEJADORES DE EVENTOS ---
-        
+        // --- MANEJADORES DE EVENTOS Y ACCIONES ---
+
         function attachEventListeners() {
-            const elements = mainContent.querySelectorAll('[data-action]');
+            const elements = document.querySelectorAll('[data-action]');
             elements.forEach(el => {
                 const action = el.dataset.action;
-                el.onclick = (e) => handleAction(action, el, e);
+                const eventType = ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) ? 'input' : 'click';
+                el.addEventListener(eventType, (e) => handleAction(action, el, e));
             });
+            
+            const importInput = document.getElementById('import-file-input');
+            if (importInput) {
+                importInput.addEventListener('change', handleAction.bind(null, 'import-data', importInput));
+            }
         }
-
-        async function handleAction(action, element, event) {
+        
+        function handleAction(action, element, event) {
             const id = element.dataset.id;
             switch(action) {
-                case 'add-activity': {
-                    const nameInput = document.getElementById('new-activity-name');
-                    const type = document.querySelector('input[name="activityType"]:checked').value;
-                    if (nameInput.value.trim() === '') return;
-                    await addDoc(collection(db, `artifacts/${appId}/users/${state.userId}/activities`), { 
-                        name: nameInput.value.trim(), type, studentIds: [] 
-                    });
-                    nameInput.value = '';
+                // Actions that re-render the view
+                case 'add-activity':
+                case 'delete-activity':
+                case 'add-student':
+                case 'delete-student':
+                case 'edit-student':
+                case 'save-student':
+                case 'cancel-edit-student':
+                case 'add-timeslot':
+                case 'delete-timeslot':
+                case 'reorder-timeslot':
+                case 'toggle-student-in-class':
+                case 'import-students':
+                case 'select-activity':
+                case 'back-to-schedule':
+                    if (actionHandlers[action]) actionHandlers[action](id, element);
+                    render();
                     break;
-                }
-                case 'delete-activity': {
-                    const modalContent = `
-                        <p>¿Seguro que quieres eliminar esta actividad? Esta acción no se puede deshacer.</p>
-                        <div class="flex justify-end gap-4 mt-6">
-                            <button class="modal-cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancelar</button>
-                            <button class="modal-confirm-btn px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Eliminar</button>
-                        </div>
-                    `;
-                    showModal('Confirmar Eliminación', modalContent, async () => {
-                        await deleteDoc(doc(db, `artifacts/${appId}/users/${state.userId}/activities`, id));
-                    });
+                // Actions that don't need a full re-render
+                case 'save-schedule':
+                case 'export-data':
+                case 'delete-all-data':
+                case 'import-data':
+                case 'save-class-entry':
+                    if (actionHandlers[action]) actionHandlers[action](id, element, event);
                     break;
-                }
-                case 'add-timeslot': {
-                    const labelInput = document.getElementById('new-timeslot-label');
-                    if (labelInput.value.trim() === '') return;
-                    const newOrder = state.timeSlots.length > 0 ? Math.max(...state.timeSlots.map(t => t.order)) + 1 : 0;
-                    await addDoc(collection(db, `artifacts/${appId}/users/${state.userId}/timeSlots`), { 
-                        label: labelInput.value.trim(), order: newOrder 
-                    });
-                    labelInput.value = '';
+                // Live input changes for class entry view
+                case 'planned-change':
+                case 'completed-change':
+                case 'annotation-change':
+                    if (actionHandlers[action]) actionHandlers[action](id, element);
                     break;
-                }
-                case 'delete-timeslot': {
-                    await deleteDoc(doc(db, `artifacts/${appId}/users/${state.userId}/timeSlots`, id));
+                 // Live input changes for student edit view
+                case 'edit-student-name-input':
+                case 'edit-student-notes-input':
+                    // These are handled by the save button, no action needed on input
                     break;
-                }
-                case 'reorder-timeslot': {
-                    const index = parseInt(element.dataset.index, 10);
-                    const direction = element.dataset.direction;
-                    if ((direction === 'up' && index === 0) || (direction === 'down' && index === state.timeSlots.length - 1)) return;
-                    
-                    const batch = writeBatch(db);
-                    const currentSlot = state.timeSlots[index];
-                    const otherSlotIndex = direction === 'up' ? index - 1 : index + 1;
-                    const otherSlot = state.timeSlots[otherSlotIndex];
-                    
-                    batch.update(doc(db, `artifacts/${appId}/users/${state.userId}/timeSlots`, currentSlot.id), { order: otherSlot.order });
-                    batch.update(doc(db, `artifacts/${appId}/users/${state.userId}/timeSlots`, otherSlot.id), { order: currentSlot.order });
-                    await batch.commit();
-                    break;
-                }
-                case 'schedule-change': {
+                // Schedule select change
+                case 'schedule-change':
                     const { day, time } = element.dataset;
                     state.schedule[`${day}-${time}`] = element.value;
-                    break; // No guardamos hasta pulsar el botón
-                }
-                case 'save-schedule': {
-                    element.textContent = 'Guardando...';
-                    await setDoc(doc(db, `artifacts/${appId}/users/${state.userId}/config/schedule`), state.schedule);
-                    alert('Horario guardado con éxito.');
-                    element.innerHTML = '<i data-lucide="save" class="w-5 h-5"></i> Guardar Horario';
-                    lucide.createIcons();
+                    // No save/render, user must click save button
                     break;
-                }
-                 case 'toggle-student-in-class': {
-                    const { activityId, studentId } = element.dataset;
-                    const activityRef = doc(db, `artifacts/${appId}/users/${state.userId}/activities`, activityId);
-                    const activityDoc = await getDoc(activityRef);
-                    if (activityDoc.exists()) {
-                        const studentIds = activityDoc.data().studentIds || [];
-                        const newStudentIds = studentIds.includes(studentId) ? studentIds.filter(id => id !== studentId) : [...studentIds, studentId];
-                        await setDoc(activityRef, { studentIds: newStudentIds }, { merge: true });
-                    }
-                    break;
-                }
             }
+        }
+        
+        const actionHandlers = {
+            // --- Student Actions ---
+            'add-student': () => {
+                const nameInput = document.getElementById('new-student-name');
+                const name = nameInput.value.trim();
+                if (name) {
+                    state.students.push({ id: crypto.randomUUID(), name, generalNotes: '' });
+                    nameInput.value = '';
+                    saveState();
+                }
+            },
+            'delete-student': (id) => {
+                showModal('Confirmar Eliminación', '¿Seguro que quieres eliminar este alumno?', () => {
+                    state.students = state.students.filter(s => s.id !== id);
+                    // Also remove from any class
+                    state.activities.forEach(act => {
+                        act.studentIds = act.studentIds?.filter(sid => sid !== id);
+                    });
+                    saveState();
+                    render();
+                });
+            },
+            'edit-student': (id) => { state.editingStudentId = id; },
+            'cancel-edit-student': () => { state.editingStudentId = null; },
+            'save-student': (id) => {
+                const student = state.students.find(s => s.id === id);
+                if (student) {
+                    const nameInput = document.querySelector(`[data-action="edit-student-name-input"][data-id="${id}"]`);
+                    const notesInput = document.querySelector(`[data-action="edit-student-notes-input"][data-id="${id}"]`);
+                    student.name = nameInput.value.trim();
+                    student.generalNotes = notesInput.value.trim();
+                    saveState();
+                }
+                state.editingStudentId = null;
+            },
+            // --- Activity Actions ---
+            'add-activity': () => {
+                const nameInput = document.getElementById('new-activity-name');
+                const name = nameInput.value.trim();
+                const type = document.querySelector('input[name="activityType"]:checked').value;
+                if (name) {
+                    state.activities.push({ id: crypto.randomUUID(), name, type, studentIds: [] });
+                    nameInput.value = '';
+                    saveState();
+                }
+            },
+            'delete-activity': (id) => {
+                showModal('Confirmar Eliminación', '¿Seguro que quieres eliminar esta actividad?', () => {
+                    state.activities = state.activities.filter(a => a.id !== id);
+                    saveState();
+                    render();
+                });
+            },
+            'toggle-student-in-class': (id, element) => {
+                const { activityId, studentId } = element.dataset;
+                const activity = state.activities.find(a => a.id === activityId);
+                if (activity) {
+                    const studentIds = activity.studentIds || [];
+                    const newStudentIds = studentIds.includes(studentId) ? studentIds.filter(sid => sid !== studentId) : [...studentIds, studentId];
+                    activity.studentIds = newStudentIds;
+                    saveState();
+                }
+            },
+            // --- TimeSlot Actions ---
+            'add-timeslot': () => {
+                const labelInput = document.getElementById('new-timeslot-label');
+                const label = labelInput.value.trim();
+                if (label) {
+                    const newOrder = state.timeSlots.length > 0 ? Math.max(...state.timeSlots.map(t => t.order)) + 1 : 0;
+                    state.timeSlots.push({ id: crypto.randomUUID(), label, order: newOrder });
+                    labelInput.value = '';
+                    saveState();
+                }
+            },
+            'delete-timeslot': (id) => {
+                state.timeSlots = state.timeSlots.filter(t => t.id !== id);
+                saveState();
+            },
+            'reorder-timeslot': (id, element) => {
+                const index = parseInt(element.dataset.index, 10);
+                const direction = element.dataset.direction;
+                const otherIndex = direction === 'up' ? index - 1 : index + 1;
+                
+                const currentSlot = state.timeSlots[index];
+                const otherSlot = state.timeSlots[otherIndex];
+
+                // Swap order values
+                [currentSlot.order, otherSlot.order] = [otherSlot.order, currentSlot.order];
+                
+                // Sort array by new order
+                state.timeSlots.sort((a, b) => a.order - b.order);
+                saveState();
+            },
+            // --- Schedule Actions ---
+            'save-schedule': () => {
+                saveState();
+                alert('Horario guardado con éxito.');
+            },
+            'select-activity': (id, element) => {
+                const { activityId, day, time } = element.dataset;
+                const activityInfo = state.activities.find(a => a.id === activityId);
+                state.selectedActivity = { ...activityInfo, day, time };
+                state.activeView = 'activityDetail';
+            },
+            'back-to-schedule': () => {
+                state.selectedActivity = null;
+                state.activeView = 'schedule';
+            },
+            // --- Class Entry Actions ---
+            'planned-change': (id, element) => {
+                const entryId = `${state.selectedActivity.id}_${new Date().toISOString().split('T')[0]}`;
+                if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
+                state.classEntries[entryId].planned = element.value;
+            },
+            'completed-change': (id, element) => {
+                const entryId = `${state.selectedActivity.id}_${new Date().toISOString().split('T')[0]}`;
+                if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
+                state.classEntries[entryId].completed = element.value;
+            },
+            'annotation-change': (id, element) => {
+                const { studentId } = element.dataset;
+                const entryId = `${state.selectedActivity.id}_${new Date().toISOString().split('T')[0]}`;
+                if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
+                state.classEntries[entryId].annotations[studentId] = element.value;
+            },
+            'save-class-entry': () => {
+                saveState();
+                alert('Datos de la sesión guardados.');
+            },
+            // --- Data Management Actions ---
+            'import-students': () => {
+                const targetClassId = document.getElementById('import-target-class').value;
+                const studentListText = document.getElementById('student-list-text').value;
+                const activity = state.activities.find(a => a.id === targetClassId);
+                if (!activity || studentListText.trim() === '') return alert("Selecciona una clase y pega una lista de alumnos.");
+
+                const names = studentListText.trim().split('\\n').filter(name => name.trim() !== '');
+                const newStudentIds = [];
+                names.forEach(name => {
+                    const newStudent = { id: crypto.randomUUID(), name: name.trim(), generalNotes: '' };
+                    state.students.push(newStudent);
+                    newStudentIds.push(newStudent.id);
+                });
+                
+                activity.studentIds = [...new Set([...(activity.studentIds || []), ...newStudentIds])];
+                saveState();
+            },
+            'export-data': () => {
+                const dataStr = JSON.stringify({
+                    activities: state.activities,
+                    students: state.students,
+                    timeSlots: state.timeSlots,
+                    schedule: state.schedule,
+                    classEntries: state.classEntries,
+                }, null, 2);
+                const blob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `cuaderno-profesor-backup-${new Date().toISOString().split('T')[0]}.json`;
+                a.click();
+                URL.revokeObjectURL(url);
+            },
+            'import-data': (id, element, event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+                showModal('Confirmar Importación', 'Importar un archivo reemplazará todos los datos actuales. ¿Estás seguro?', () => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const data = JSON.parse(e.target.result);
+                            state.activities = data.activities || [];
+                            state.students = data.students || [];
+                            state.timeSlots = data.timeSlots || [];
+                            state.schedule = data.schedule || {};
+                            state.classEntries = data.classEntries || {};
+                            saveState();
+                            alert('Datos importados con éxito.');
+                            window.location.reload();
+                        } catch (error) {
+                            alert('Error al importar el archivo.');
+                        }
+                    };
+                    reader.readAsText(file);
+                });
+            },
+            'delete-all-data': () => {
+                showModal('Borrar Todos los Datos', 'Esta acción es irreversible y borrará todos los datos de la aplicación. ¿Estás seguro?', () => {
+                    localStorage.removeItem('teacherDashboardData');
+                    alert('Todos los datos han sido borrados.');
+                    window.location.reload();
+                });
+            },
+        };
+
+        // --- MODAL HELPER ---
+        const modalContainer = document.getElementById('modal-container');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
+
+        function showModal(title, content, onConfirm) {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = `<p>${content}</p>
+                <div class="flex justify-end gap-4 mt-6">
+                    <button id="modal-cancel" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancelar</button>
+                    <button id="modal-confirm" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Confirmar</button>
+                </div>`;
+            
+            const close = () => modalContainer.classList.add('hidden');
+            modalContainer.classList.remove('hidden');
+            
+            document.getElementById('modal-confirm').onclick = () => {
+                if(onConfirm) onConfirm();
+                close();
+            };
+            document.getElementById('modal-cancel').onclick = close;
+            modalCloseBtn.onclick = close;
         }
 
         // --- INICIALIZACIÓN ---
-
-        function setupNav() {
+        function init() {
+            loadState();
+            updateNavButtons();
+            render();
+            
             navButtons.forEach(btn => {
                 btn.addEventListener('click', () => {
                     state.activeView = btn.dataset.view;
                     state.selectedActivity = null;
+                    state.editingStudentId = null;
                     updateNavButtons();
                     render();
                 });
             });
         }
 
-        function detachAllListeners() {
-            state.unsubscribe.forEach(unsub => unsub());
-            state.unsubscribe = [];
-        }
-
-        function attachDataListeners() {
-            detachAllListeners(); // Limpiar listeners anteriores
-            if (!db || !state.userId) return;
-
-            const unsubActivities = onSnapshot(query(collection(db, `artifacts/${appId}/users/${state.userId}/activities`), orderBy("name")), snapshot => {
-                state.activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                render();
-            });
-            const unsubStudents = onSnapshot(query(collection(db, `artifacts/${appId}/users/${state.userId}/students`), orderBy("name")), snapshot => {
-                state.students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                render();
-            });
-            const unsubTimeSlots = onSnapshot(query(collection(db, `artifacts/${appId}/users/${state.userId}/timeSlots`), orderBy("order")), snapshot => {
-                state.timeSlots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                render();
-            });
-            const unsubSchedule = onSnapshot(doc(db, `artifacts/${appId}/users/${state.userId}/config/schedule`), (doc) => {
-                state.schedule = doc.exists() ? doc.data() : {};
-                render();
-            });
-            
-            state.unsubscribe.push(unsubActivities, unsubStudents, unsubTimeSlots, unsubSchedule);
-        }
-
-        async function init() {
-            lucide.createIcons();
-            setupNav();
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        state.userId = user.uid;
-                    } else {
-                        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                        const userCredential = token ? await signInWithCustomToken(auth, token) : await signInAnonymously(auth);
-                        state.userId = userCredential.user.uid;
-                    }
-                    sessionIdEl.textContent = state.userId;
-                    state.isAuthReady = true;
-                    attachDataListeners(); // Adjuntar listeners una vez autenticado
-                });
-            } catch(e) {
-                console.error("Error al inicializar Firebase:", e);
-                state.isAuthReady = true;
-                render();
-            }
-        }
-
         init();
-
     </script>
 </body>
 </html>
