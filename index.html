@@ -1,490 +1,480 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'firebase/auth';
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, addDoc, deleteDoc, writeBatch, getDocs, query, orderBy } from 'firebase/firestore';
-import { BookUser, CalendarDays, Settings, Users, Upload, Download, Trash2, PlusCircle, Save, AlertTriangle, ClipboardPaste, Clock, ChevronUp, ChevronDown } from 'lucide-react';
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cuaderno del Profesor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .animate-fade-in { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    </style>
+</head>
+<body class="bg-gray-100">
 
-// --- CONFIGURACIÓN DE FIREBASE ---
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-teacher-app';
-
-// --- COMPONENTES DE LA INTERFAZ ---
-
-const Modal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-    return (
-        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto">
-                <div className="flex justify-between items-center p-4 border-b">
-                    <h3 className="text-xl font-semibold text-gray-800">{title}</h3>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+    <div class="flex h-screen">
+        <!-- Sidebar de Navegación -->
+        <nav class="flex flex-col justify-between w-16 sm:w-56 bg-white border-r border-gray-200 p-3">
+            <div>
+                <div class="flex items-center gap-3 mb-8 px-2">
+                    <div data-lucide="book-user" class="text-blue-600 w-7 h-7"></div>
+                    <h1 class="text-xl font-bold text-gray-800 hidden sm:inline">Cuaderno del Profesor</h1>
+                </div>
+                <div class="space-y-2">
+                    <button data-view="schedule" class="nav-button flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full p-3 text-sm font-medium rounded-md transition-colors bg-blue-600 text-white">
+                        <div data-lucide="calendar-days" class="w-5 h-5"></div>
+                        <span class="hidden sm:inline">Horario</span>
+                    </button>
+                    <button data-view="students" class="nav-button flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full p-3 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900">
+                        <div data-lucide="users" class="w-5 h-5"></div>
+                        <span class="hidden sm:inline">Alumnos</span>
+                    </button>
+                    <button data-view="settings" class="nav-button flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full p-3 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900">
+                        <div data-lucide="settings" class="w-5 h-5"></div>
+                        <span class="hidden sm:inline">Configuración</span>
                     </button>
                 </div>
-                <div className="p-6">{children}</div>
             </div>
+            <div class="text-xs text-gray-400 p-2 break-words">
+                <span class="font-semibold">ID de Sesión:</span>
+                <span id="session-id">Cargando...</span>
+            </div>
+        </nav>
+
+        <!-- Contenido Principal -->
+        <main id="main-content" class="flex-1 overflow-y-auto">
+            <!-- El contenido se renderizará aquí -->
+        </main>
+    </div>
+
+    <!-- Modal Genérico -->
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto">
+            <div class="flex justify-between items-center p-4 border-b">
+                <h3 id="modal-title" class="text-xl font-semibold text-gray-800"></h3>
+                <button id="modal-close-btn" class="text-gray-400 hover:text-gray-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div id="modal-body" class="p-6"></div>
         </div>
-    );
-};
+    </div>
 
-const StudentsView = ({ db, userId }) => {
-    const [students, setStudents] = useState([]);
-    const [newStudentName, setNewStudentName] = useState('');
-    const [editingStudent, setEditingStudent] = useState(null);
-    const [showConfirmModal, setShowConfirmModal] = useState(false);
-    const [studentToDelete, setStudentToDelete] = useState(null);
 
-    useEffect(() => {
-        if (!db || !userId) return;
-        const studentsCol = collection(db, `artifacts/${appId}/users/${userId}/students`);
-        const q = query(studentsCol, orderBy("name"));
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const studentList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setStudents(studentList);
-        });
-        return () => unsubscribe();
-    }, [db, userId]);
+    <script type="module">
+        // --- IMPORTS DE FIREBASE ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot, addDoc, deleteDoc, writeBatch, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    const handleAddStudent = async () => {
-        if (newStudentName.trim() === '') return;
-        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/students`), { name: newStudentName.trim(), generalNotes: "" });
-        setNewStudentName('');
-    };
-    
-    const confirmDeleteStudent = (studentId) => {
-        setStudentToDelete(studentId);
-        setShowConfirmModal(true);
-    };
+        // --- CONFIGURACIÓN Y ESTADO GLOBAL ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-teacher-app-html';
+        
+        let db, auth;
+        const state = {
+            userId: null,
+            isAuthReady: false,
+            activeView: 'schedule',
+            activities: [],
+            students: [],
+            timeSlots: [],
+            schedule: {},
+            selectedActivity: null,
+            unsubscribe: []
+        };
 
-    const handleDeleteStudent = async () => {
-        if (!studentToDelete) return;
-        await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/students`, studentToDelete));
-        setShowConfirmModal(false);
-        setStudentToDelete(null);
-    };
+        const mainContent = document.getElementById('main-content');
+        const sessionIdEl = document.getElementById('session-id');
+        const navButtons = document.querySelectorAll('.nav-button');
+        
+        // --- MODAL ---
+        const modalContainer = document.getElementById('modal-container');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+        const modalCloseBtn = document.getElementById('modal-close-btn');
 
-    const handleSaveStudent = async () => {
-        if (!editingStudent) return;
-        await setDoc(doc(db, `artifacts/${appId}/users/${userId}/students`, editingStudent.id), { name: editingStudent.name, generalNotes: editingStudent.generalNotes }, { merge: true });
-        setEditingStudent(null);
-    };
+        const showModal = (title, content, onConfirm) => {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = ''; // Clear previous content
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.innerHTML = content;
+            modalBody.appendChild(contentDiv);
+            
+            const confirmButton = contentDiv.querySelector('.modal-confirm-btn');
+            const cancelButton = contentDiv.querySelector('.modal-cancel-btn');
 
-    return (
-        <div className="p-6 bg-gray-50 min-h-full animate-fade-in">
-            <Modal isOpen={showConfirmModal} onClose={() => setShowConfirmModal(false)} title="Confirmar Eliminación">
-                <p>¿Seguro que quieres eliminar este alumno? Se borrarán todas sus anotaciones y se desvinculará de todas las clases.</p>
-                <div className="flex justify-end gap-4 mt-6">
-                    <button onClick={() => setShowConfirmModal(false)} className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancelar</button>
-                    <button onClick={handleDeleteStudent} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Eliminar</button>
-                </div>
-            </Modal>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Gestión de Alumnos</h2>
-            <div className="bg-white p-6 rounded-lg shadow-md mb-6">
-                <h3 className="text-lg font-semibold mb-3">Añadir Nuevo Alumno</h3>
-                <div className="flex gap-2">
-                    <input type="text" value={newStudentName} onChange={(e) => setNewStudentName(e.target.value)} placeholder="Nombre completo del alumno" className="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-blue-500"/>
-                    <button onClick={handleAddStudent} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"><PlusCircle size={18} /> Añadir</button>
-                </div>
-            </div>
-            <div className="bg-white p-6 rounded-lg shadow-md">
-                <h3 className="text-lg font-semibold mb-3">Lista de Alumnos</h3>
-                <div className="space-y-3">{students.length > 0 ? students.map(student => (<div key={student.id} className="p-4 border rounded-md bg-gray-50">{editingStudent?.id === student.id ? (<div className="space-y-3"><input type="text" value={editingStudent.name} onChange={(e) => setEditingStudent({...editingStudent, name: e.target.value})} className="w-full p-2 border rounded-md"/><textarea value={editingStudent.generalNotes} onChange={(e) => setEditingStudent({...editingStudent, generalNotes: e.target.value})} placeholder="Anotaciones generales sobre el alumno" className="w-full p-2 border rounded-md h-24"/><div className="flex gap-2"><button onClick={handleSaveStudent} className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm flex items-center gap-1"><Save size={16}/> Guardar</button><button onClick={() => setEditingStudent(null)} className="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 text-sm">Cancelar</button></div></div>) : (<div className="flex justify-between items-center"><div><p className="font-semibold text-gray-800">{student.name}</p><p className="text-sm text-gray-500 italic mt-1">{student.generalNotes || "Sin anotaciones generales."}</p></div><div className="flex gap-2"><button onClick={() => setEditingStudent(student)} className="text-blue-600 hover:text-blue-800">Editar</button><button onClick={() => confirmDeleteStudent(student.id)} className="text-red-600 hover:text-red-800"><Trash2 size={18}/></button></div></div>)}</div>)) : <p className="text-gray-500">No hay alumnos registrados.</p>}</div>
-            </div>
-        </div>
-    );
-};
+            const close = () => modalContainer.classList.add('hidden');
 
-const SettingsView = ({ db, userId }) => {
-    const [activities, setActivities] = useState([]);
-    const [newActivityName, setNewActivityName] = useState('');
-    const [newActivityType, setNewActivityType] = useState('class');
-    const [schedule, setSchedule] = useState({});
-    const [students, setStudents] = useState([]);
-    const [timeSlots, setTimeSlots] = useState([]);
-    const [newTimeSlot, setNewTimeSlot] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
-    const [importTargetClassId, setImportTargetClassId] = useState('');
-    const [studentListText, setStudentListText] = useState('');
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    
-    const days = useMemo(() => ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"], []);
-
-    useEffect(() => {
-        if (!db || !userId) return;
-        const unsubActivities = onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/activities`), orderBy("name")), snapshot => setActivities(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const unsubStudents = onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/students`), orderBy("name")), snapshot => setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const unsubSchedule = onSnapshot(doc(db, `artifacts/${appId}/users/${userId}/config/schedule`), (doc) => setSchedule(doc.exists() ? doc.data() : {}));
-        const unsubTimeSlots = onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/timeSlots`), orderBy("order")), snapshot => setTimeSlots(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        return () => { unsubActivities(); unsubStudents(); unsubSchedule(); unsubTimeSlots(); };
-    }, [db, userId]);
-
-    const handleAddActivity = async () => {
-        if (newActivityName.trim() === '') return;
-        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/activities`), { 
-            name: newActivityName.trim(),
-            type: newActivityType,
-            studentIds: [] 
-        });
-        setNewActivityName('');
-    };
-
-    const handleDeleteActivity = async (activityId) => {
-        if (window.confirm('¿Seguro que quieres eliminar esta actividad?')) {
-            await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/activities`, activityId));
-        }
-    };
-    
-    const handleToggleStudentInClass = async (activityId, studentId) => {
-        const activityRef = doc(db, `artifacts/${appId}/users/${userId}/activities`, activityId);
-        const activityDoc = await getDoc(activityRef);
-        if (activityDoc.exists()) {
-            const studentIds = activityDoc.data().studentIds || [];
-            const newStudentIds = studentIds.includes(studentId) ? studentIds.filter(id => id !== studentId) : [...studentIds, studentId];
-            await setDoc(activityRef, { studentIds: newStudentIds }, { merge: true });
-        }
-    };
-
-    const handleScheduleChange = (day, time, activityId) => setSchedule(prev => ({...prev, [`${day}-${time}`]: activityId || null}));
-    const handleSaveSchedule = async () => {
-        setIsSaving(true);
-        await setDoc(doc(db, `artifacts/${appId}/users/${userId}/config/schedule`), schedule);
-        setIsSaving(false);
-        alert('Horario guardado con éxito.');
-    };
-
-    const handleAddTimeSlot = async () => {
-        if (newTimeSlot.trim() === '') return;
-        const newOrder = timeSlots.length > 0 ? Math.max(...timeSlots.map(t => t.order)) + 1 : 0;
-        await addDoc(collection(db, `artifacts/${appId}/users/${userId}/timeSlots`), { 
-            label: newTimeSlot.trim(),
-            order: newOrder
-        });
-        setNewTimeSlot('');
-    };
-    const handleDeleteTimeSlot = async (slotId) => await deleteDoc(doc(db, `artifacts/${appId}/users/${userId}/timeSlots`, slotId));
-
-    const handleReorderTimeSlot = async (index, direction) => {
-        if ((direction === 'up' && index === 0) || (direction === 'down' && index === timeSlots.length - 1)) {
-            return;
-        }
-    
-        const batch = writeBatch(db);
-        const currentSlot = timeSlots[index];
-        const otherSlotIndex = direction === 'up' ? index - 1 : index + 1;
-        const otherSlot = timeSlots[otherSlotIndex];
-    
-        const currentSlotRef = doc(db, `artifacts/${appId}/users/${userId}/timeSlots`, currentSlot.id);
-        batch.update(currentSlotRef, { order: otherSlot.order });
-    
-        const otherSlotRef = doc(db, `artifacts/${appId}/users/${userId}/timeSlots`, otherSlot.id);
-        batch.update(otherSlotRef, { order: currentSlot.order });
-    
-        await batch.commit();
-    };
-
-    const handleImportStudents = async () => {
-        if (!importTargetClassId || studentListText.trim() === '') return alert("Por favor, selecciona una clase y pega una lista de alumnos.");
-        const names = studentListText.trim().split('\n').filter(name => name.trim() !== '');
-        if (names.length === 0) return alert("La lista de alumnos está vacía.");
-        try {
-            const batch = writeBatch(db);
-            const studentsCol = collection(db, `artifacts/${appId}/users/${userId}/students`);
-            const newStudentIds = [];
-            for (const name of names) {
-                const newStudentRef = doc(studentsCol);
-                batch.set(newStudentRef, { name: name.trim(), generalNotes: "" });
-                newStudentIds.push(newStudentRef.id);
+            if (confirmButton && onConfirm) {
+                confirmButton.onclick = () => {
+                    onConfirm();
+                    close();
+                };
             }
-            const classRef = doc(db, `artifacts/${appId}/users/${userId}/activities`, importTargetClassId);
-            const classDoc = await getDoc(classRef);
-            if (classDoc.exists()) {
-                const existingStudentIds = classDoc.data().studentIds || [];
-                const updatedStudentIds = [...new Set([...existingStudentIds, ...newStudentIds])];
-                batch.update(classRef, { studentIds: updatedStudentIds });
+            if (cancelButton) {
+                cancelButton.onclick = close;
             }
-            await batch.commit();
-            alert(`${names.length} alumnos importados y añadidos a la clase con éxito.`);
-            setStudentListText('');
-            setImportTargetClassId('');
-        } catch (error) { console.error("Error al importar alumnos:", error); alert("Ocurrió un error durante la importación."); }
-    };
+            modalCloseBtn.onclick = close;
+            modalContainer.classList.remove('hidden');
+        };
 
-    const handleDeleteAllData = async () => {
-        setIsDeleteModalOpen(false);
-        try {
-            const collectionsToDelete = ['students', 'activities', 'classEntries', 'timeSlots'];
-            const batch = writeBatch(db);
-            for (const colName of collectionsToDelete) {
-                const snapshot = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/${colName}`));
-                snapshot.docs.forEach(doc => batch.delete(doc.ref));
-            }
-            batch.delete(doc(db, `artifacts/${appId}/users/${userId}/config/schedule`));
-            await batch.commit();
-            alert("Todos los datos han sido borrados. La página se recargará.");
-            window.location.reload();
-        } catch (error) { console.error("Error al borrar todos los datos:", error); alert("Ocurrió un error al intentar borrar los datos."); }
-    };
+        // --- LÓGICA DE LA APLICACIÓN ---
 
-    const exportData = async () => {
-        const dataToExport = {};
-        const collectionsToExport = ['students', 'activities', 'classEntries', 'timeSlots'];
-        for (const colName of collectionsToExport) {
-            const snapshot = await getDocs(collection(db, `artifacts/${appId}/users/${userId}/${colName}`));
-            dataToExport[colName] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        function updateNavButtons() {
+            navButtons.forEach(btn => {
+                const view = btn.dataset.view;
+                if (view === state.activeView) {
+                    btn.classList.add('bg-blue-600', 'text-white');
+                    btn.classList.remove('text-gray-600', 'hover:bg-gray-200', 'hover:text-gray-900');
+                } else {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('text-gray-600', 'hover:bg-gray-200', 'hover:text-gray-900');
+                }
+            });
         }
-        const scheduleSnap = await getDoc(doc(db, `artifacts/${appId}/users/${userId}/config/schedule`));
-        if (scheduleSnap.exists()) dataToExport['schedule'] = scheduleSnap.data();
-        const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `cuaderno-profesor-backup-${new Date().toISOString().split('T')[0]}.json`;
-        a.click();
-        URL.revokeObjectURL(url);
-    };
 
-    const importData = (event) => {
-        const file = event.target.files[0];
-        if (!file || !window.confirm("Importar datos sobreescribirá toda la información actual. ¿Estás seguro?")) return;
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
-                const batch = writeBatch(db);
-                const collectionsToImport = ['students', 'activities', 'classEntries', 'timeSlots'];
-                for (const colName of collectionsToImport) {
-                    if (data[colName]) {
-                        for (const item of data[colName]) {
-                            batch.set(doc(db, `artifacts/${appId}/users/${userId}/${colName}`, item.id), item);
+        function render() {
+            if (!state.isAuthReady) {
+                mainContent.innerHTML = `<div class="p-6">Cargando aplicación...</div>`;
+                return;
+            }
+            if (!db || !state.userId) {
+                mainContent.innerHTML = `<div class="p-6 text-red-500">Error: No se pudo conectar a la base de datos.</div>`;
+                return;
+            }
+
+            mainContent.innerHTML = ''; // Limpiar vista anterior
+            let viewContent = '';
+
+            switch (state.activeView) {
+                case 'schedule':
+                    viewContent = renderScheduleView();
+                    break;
+                case 'students':
+                    viewContent = renderStudentsView();
+                    break;
+                case 'settings':
+                    viewContent = renderSettingsView();
+                    break;
+                case 'activityDetail':
+                    viewContent = renderActivityDetailView();
+                    break;
+                default:
+                    viewContent = renderScheduleView();
+            }
+            mainContent.innerHTML = `<div class="animate-fade-in">${viewContent}</div>`;
+            lucide.createIcons(); // Re-render icons
+            attachEventListeners();
+        }
+
+        // --- VISTAS (Templates HTML) ---
+
+        function renderScheduleView() {
+            const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+            const getActivityById = (id) => state.activities.find(c => c.id === id);
+
+            const tableRows = state.timeSlots.map(time => {
+                const cells = days.map(day => {
+                    const activityId = state.schedule[`${day}-${time.label}`];
+                    const activityInfo = activityId ? getActivityById(activityId) : null;
+                    let cellContent = `<div class="p-2 h-full"></div>`;
+                    if (activityInfo) {
+                        if (activityInfo.type === 'class') {
+                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${day}' data-time='${time.label}' class="w-full h-full p-2 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors text-sm font-semibold">${activityInfo.name}</button>`;
+                        } else {
+                            cellContent = `<div class="w-full h-full p-2 rounded-md bg-green-100 text-green-800 text-sm font-semibold flex items-center justify-center">${activityInfo.name}</div>`;
                         }
                     }
-                }
-                if (data.schedule) batch.set(doc(db, `artifacts/${appId}/users/${userId}/config/schedule`), data.schedule);
-                await batch.commit();
-                alert('Datos importados con éxito.');
-                window.location.reload();
-            } catch (error) { console.error("Error al importar datos:", error); alert("Error al importar el archivo."); }
-        };
-        reader.readAsText(file);
-    };
+                    return `<td class="p-1 border">${cellContent}</td>`;
+                }).join('');
+                return `<tr><td class="p-2 border font-mono bg-gray-50 text-sm">${time.label}</td>${cells}</tr>`;
+            }).join('');
 
-    return (
-        <div className="p-6 bg-gray-50 min-h-full animate-fade-in space-y-8">
-            <Modal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} title="Borrar Todos los Datos">
-                <div className="text-center"><AlertTriangle className="mx-auto h-12 w-12 text-red-600" /><h3 className="mt-2 text-lg font-medium text-gray-900">¿Estás absolutamente seguro?</h3><div className="mt-2 text-sm text-gray-500"><p>Esta acción es irreversible. Se eliminarán permanentemente todos tus alumnos, actividades, horarios y anotaciones.</p><p className="font-bold mt-2">No podrás recuperar esta información.</p></div></div>
-                <div className="flex justify-end gap-4 mt-6"><button onClick={() => setIsDeleteModalOpen(false)} className="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancelar</button><button onClick={handleDeleteAllData} className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Sí, borrar todo</button></div>
-            </Modal>
-            <h2 className="text-2xl font-bold text-gray-800">Configuración General</h2>
-            <div className="grid lg:grid-cols-2 gap-8 items-start">
-                <div className="space-y-8">
-                    {/* Gestión de Actividades */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-3">Gestión de Actividades</h3>
-                        <div className="flex gap-2 mb-2"><input type="text" value={newActivityName} onChange={e => setNewActivityName(e.target.value)} placeholder="Nombre de la actividad" className="flex-grow p-2 border rounded-md"/><button onClick={handleAddActivity} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><PlusCircle size={18}/>Añadir</button></div>
-                        <div className="flex gap-4 mb-4 text-sm"><label className="flex items-center gap-2"><input type="radio" name="activityType" value="class" checked={newActivityType === 'class'} onChange={e => setNewActivityType(e.target.value)} className="form-radio"/>Clase con alumnos</label><label className="flex items-center gap-2"><input type="radio" name="activityType" value="general" checked={newActivityType === 'general'} onChange={e => setNewActivityType(e.target.value)} className="form-radio"/>Actividad general</label></div>
-                        <div className="space-y-3 max-h-96 overflow-y-auto pr-2">{activities.map(act => (<div key={act.id} className="p-4 border rounded-md"><div className="flex justify-between items-center"><span className="font-semibold">{act.name} <span className="text-xs text-gray-500 font-normal">({act.type === 'class' ? 'Clase' : 'General'})</span></span><button onClick={() => handleDeleteActivity(act.id)} className="text-red-500 hover:text-red-700"><Trash2 size={18}/></button></div>{act.type === 'class' && (<div className="mt-3"><h4 className="text-sm font-medium mb-2">Alumnos en esta clase:</h4><div className="flex flex-wrap gap-2">{students.map(student => (<label key={student.id} className="flex items-center gap-2 text-sm p-2 bg-gray-100 rounded-md"><input type="checkbox" checked={act.studentIds?.includes(student.id) || false} onChange={() => handleToggleStudentInClass(act.id, student.id)} className="rounded"/>{student.name}</label>))}</div></div>)}</div>))}</div>
+            return `
+                <div class="p-6 bg-gray-50 min-h-full">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Horario Semanal</h2>
+                    <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+                        <table class="w-full border-collapse text-center">
+                            <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${days.map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
+                            <tbody>${tableRows}</tbody>
+                        </table>
                     </div>
-                    {/* Importación Rápida */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2"><ClipboardPaste size={20}/> Importación Rápida de Alumnos</h3>
-                        <div className="space-y-4">
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">1. Selecciona la clase de destino</label><select value={importTargetClassId} onChange={e => setImportTargetClassId(e.target.value)} className="w-full p-2 border rounded-md"><option value="">-- Elige una clase --</option>{activities.filter(a => a.type === 'class').map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-                            <div><label className="block text-sm font-medium text-gray-700 mb-1">2. Pega la lista de alumnos (un nombre por línea)</label><textarea value={studentListText} onChange={e => setStudentListText(e.target.value)} placeholder="Juan Pérez&#10;María García&#10;..." className="w-full p-2 border rounded-md h-32"></textarea></div>
-                            <button onClick={handleImportStudents} className="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2"><Upload size={18}/> Importar Alumnos</button>
+                </div>
+            `;
+        }
+        
+        function renderStudentsView() {
+            // Implementar vista de alumnos
+            return `<div class="p-6">Vista de Alumnos no implementada aún.</div>`;
+        }
+
+        function renderSettingsView() {
+            const activitiesHtml = state.activities.map(act => `
+                <div class="p-4 border rounded-md">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold">${act.name} <span class="text-xs text-gray-500 font-normal">(${act.type === 'class' ? 'Clase' : 'General'})</span></span>
+                        <button data-action="delete-activity" data-id="${act.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                    ${act.type === 'class' ? `
+                    <div class="mt-3">
+                        <h4 class="text-sm font-medium mb-2">Alumnos en esta clase:</h4>
+                        <div class="flex flex-wrap gap-2">
+                            ${state.students.map(student => `
+                                <label class="flex items-center gap-2 text-sm p-2 bg-gray-100 rounded-md">
+                                    <input type="checkbox" data-action="toggle-student-in-class" data-activity-id="${act.id}" data-student-id="${student.id}" class="rounded" ${act.studentIds?.includes(student.id) ? 'checked' : ''}>
+                                    ${student.name}
+                                </label>
+                            `).join('')}
+                        </div>
+                    </div>` : ''}
+                </div>
+            `).join('');
+
+            const timeSlotsHtml = state.timeSlots.map((slot, index) => `
+                <div class="flex justify-between items-center bg-gray-100 p-2 rounded-md">
+                    <span>${slot.label}</span>
+                    <div class="flex items-center gap-2">
+                        <button data-action="reorder-timeslot" data-index="${index}" data-direction="up" ${index === 0 ? 'disabled' : ''} class="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
+                        <button data-action="reorder-timeslot" data-index="${index}" data-direction="down" ${index === state.timeSlots.length - 1 ? 'disabled' : ''} class="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
+                        <button data-action="delete-timeslot" data-id="${slot.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                </div>
+            `).join('');
+            
+            const scheduleTableRows = state.timeSlots.map(time => {
+                const cells = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"].map(day => `
+                    <td class="p-1 border">
+                        <select data-action="schedule-change" data-day="${day}" data-time="${time.label}" class="w-full p-1 border-0 rounded-md focus:ring-1 focus:ring-blue-500 text-xs">
+                            <option value="">Libre</option>
+                            ${state.activities.map(act => `<option value="${act.id}" ${state.schedule[`${day}-${time.label}`] === act.id ? 'selected' : ''}>${act.name}</option>`).join('')}
+                        </select>
+                    </td>
+                `).join('');
+                return `<tr><td class="p-2 border font-mono bg-gray-50">${time.label}</td>${cells}</tr>`;
+            }).join('');
+
+
+            return `
+                <div class="p-6 bg-gray-50 min-h-full space-y-8">
+                    <h2 class="text-2xl font-bold text-gray-800">Configuración General</h2>
+                    <div class="grid lg:grid-cols-2 gap-8 items-start">
+                        <div class="space-y-8">
+                            <!-- Gestión de Actividades -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3">Gestión de Actividades</h3>
+                                <div class="flex gap-2 mb-2">
+                                    <input type="text" id="new-activity-name" placeholder="Nombre de la actividad" class="flex-grow p-2 border rounded-md"/>
+                                    <button data-action="add-activity" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i>Añadir</button>
+                                </div>
+                                <div class="flex gap-4 mb-4 text-sm">
+                                    <label class="flex items-center gap-2"><input type="radio" name="activityType" value="class" checked class="form-radio"/>Clase con alumnos</label>
+                                    <label class="flex items-center gap-2"><input type="radio" name="activityType" value="general" class="form-radio"/>Actividad general</label>
+                                </div>
+                                <div class="space-y-3 max-h-96 overflow-y-auto pr-2">${activitiesHtml}</div>
+                            </div>
+                            <!-- Más secciones aquí -->
+                        </div>
+                        <div class="space-y-8">
+                            <!-- Gestión de Franjas Horarias -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> Franjas Horarias</h3>
+                                <div class="flex gap-2 mb-4">
+                                    <input type="text" id="new-timeslot-label" placeholder="Ej: 08:00-09:00" class="flex-grow p-2 border rounded-md"/>
+                                    <button data-action="add-timeslot" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i>Añadir</button>
+                                </div>
+                                <div class="space-y-2">${timeSlotsHtml}</div>
+                            </div>
+                            <!-- Horario Semanal -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3">Configurar Horario Semanal</h3>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full border-collapse text-sm">
+                                        <thead><tr class="bg-gray-100"><th class="p-2 border">Hora</th>${["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"].map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
+                                        <tbody>${scheduleTableRows}</tbody>
+                                    </table>
+                                </div>
+                                <button data-action="save-schedule" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 w-full flex items-center justify-center gap-2"><i data-lucide="save" class="w-5 h-5"></i> Guardar Horario</button>
+                            </div>
                         </div>
                     </div>
                 </div>
-                <div className="space-y-8">
-                    {/* Gestión de Franjas Horarias */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-3 flex items-center gap-2"><Clock size={20}/> Franjas Horarias</h3>
-                        <div className="flex gap-2 mb-4"><input type="text" value={newTimeSlot} onChange={e => setNewTimeSlot(e.target.value)} placeholder="Ej: 08:00-09:00" className="flex-grow p-2 border rounded-md"/><button onClick={handleAddTimeSlot} className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><PlusCircle size={18}/>Añadir</button></div>
-                        <div className="space-y-2">{timeSlots.map((slot, index) => (<div key={slot.id} className="flex justify-between items-center bg-gray-100 p-2 rounded-md"><span>{slot.label}</span><div className="flex items-center gap-2"><button onClick={() => handleReorderTimeSlot(index, 'up')} disabled={index === 0} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><ChevronUp size={18} /></button><button onClick={() => handleReorderTimeSlot(index, 'down')} disabled={index === timeSlots.length - 1} className="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><ChevronDown size={18} /></button><button onClick={() => handleDeleteTimeSlot(slot.id)} className="text-red-500 hover:text-red-700"><Trash2 size={16}/></button></div></div>))}</div>
-                    </div>
-                    {/* Horario Semanal */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-3">Configurar Horario Semanal</h3>
-                        <div className="overflow-x-auto"><table className="w-full border-collapse text-sm"><thead><tr className="bg-gray-100"><th className="p-2 border">Hora</th>{days.map(day => <th key={day} className="p-2 border">{day}</th>)}</tr></thead><tbody>{timeSlots.map(time => (<tr key={time.id}><td className="p-2 border font-mono bg-gray-50">{time.label}</td>{days.map(day => (<td key={day} className="p-1 border"><select value={schedule[`${day}-${time.label}`] || ''} onChange={e => handleScheduleChange(day, time.label, e.target.value)} className="w-full p-1 border-0 rounded-md focus:ring-1 focus:ring-blue-500 text-xs"><option value="">Libre</option>{activities.map(act => <option key={act.id} value={act.id}>{act.name}</option>)}</select></td>))}</tr>))}</tbody></table></div>
-                        <button onClick={handleSaveSchedule} disabled={isSaving} className="mt-4 bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 w-full flex items-center justify-center gap-2"><Save size={18}/> {isSaving ? 'Guardando...' : 'Guardar Horario'}</button>
-                    </div>
-                    {/* Copia de Seguridad y Zona de Peligro */}
-                    <div className="bg-white p-6 rounded-lg shadow-md">
-                        <h3 className="text-lg font-semibold mb-3">Copia de Seguridad</h3>
-                        <div className="flex gap-4"><button onClick={exportData} className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"><Download size={18}/> Exportar</button><label className="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2 cursor-pointer"><Upload size={18}/> Importar<input type="file" accept=".json" onChange={importData} className="hidden"/></label></div>
-                        <p className="text-sm text-gray-500 mt-2">Guarda o restaura una copia de todos tus datos.</p>
-                    </div>
-                    <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
-                        <h3 className="text-lg font-semibold text-red-800 flex items-center gap-2"><AlertTriangle size={20}/> Zona de Peligro</h3>
-                        <p className="text-red-700 mt-2 text-sm">La siguiente acción es destructiva y permanente.</p>
-                        <button onClick={() => setIsDeleteModalOpen(true)} className="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center gap-2"><Trash2 size={18}/> Borrar todos los datos</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-const ScheduleView = ({ activities, schedule, timeSlots, onActivitySelect }) => {
-    const days = useMemo(() => ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"], []);
-    const getActivityById = useCallback((id) => activities.find(c => c.id === id), [activities]);
-    
-    const getActivityCell = (day, time) => {
-        const activityId = schedule[`${day}-${time}`];
-        const activityInfo = activityId ? getActivityById(activityId) : null;
-        if (!activityInfo) return <div className="p-2 h-full"></div>;
-
-        if (activityInfo.type === 'class') {
-            return (<button onClick={() => onActivitySelect({ ...activityInfo, day, time })} className="w-full h-full p-2 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors text-sm font-semibold">{activityInfo.name}</button>);
+            `;
         }
-        return (<div className="w-full h-full p-2 rounded-md bg-green-100 text-green-800 text-sm font-semibold flex items-center justify-center">{activityInfo.name}</div>);
-    };
 
-    return (
-        <div className="p-6 bg-gray-50 min-h-full animate-fade-in">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Horario Semanal</h2>
-            <div className="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
-                <table className="w-full border-collapse text-center">
-                    <thead><tr className="bg-gray-100"><th className="p-2 border w-24">Hora</th>{days.map(day => <th key={day} className="p-2 border">{day}</th>)}</tr></thead>
-                    <tbody>{timeSlots.map(time => (<tr key={time.id}><td className="p-2 border font-mono bg-gray-50 text-sm">{time.label}</td>{days.map(day => (<td key={day} className="p-1 border">{getActivityCell(day, time.label)}</td>))}</tr>))}</tbody>
-                </table>
-            </div>
-        </div>
-    );
-};
+        function renderActivityDetailView() {
+            return `<div class="p-6">Vista de Detalle de Actividad no implementada aún.</div>`;
+        }
 
-const ActivityDetailView = ({ db, userId, activityData, students, onBack }) => {
-    const [entry, setEntry] = useState({ planned: '', completed: '', annotations: {} });
-    const [isLoading, setIsLoading] = useState(true);
-    const today = new Date().toISOString().split('T')[0];
-    const entryId = `${activityData.id}_${today}`;
-
-    useEffect(() => {
-        const entryRef = doc(db, `artifacts/${appId}/users/${userId}/classEntries`, entryId);
-        const unsubscribe = onSnapshot(entryRef, (doc) => {
-            if (doc.exists()) setEntry(doc.data());
-            else setEntry({ planned: '', completed: '', annotations: {} });
-            setIsLoading(false);
-        });
-        return () => unsubscribe();
-    }, [db, userId, entryId]);
-
-    const handleSave = async () => {
-        await setDoc(doc(db, `artifacts/${appId}/users/${userId}/classEntries`, entryId), entry, { merge: true });
-        alert('Datos de la clase guardados.');
-    };
-
-    const handleAnnotationChange = (studentId, text) => setEntry(prev => ({...prev, annotations: {...prev.annotations, [studentId]: text}}));
-    const studentsInClass = useMemo(() => students.filter(s => activityData.studentIds?.includes(s.id)), [students, activityData.studentIds]);
-
-    if (isLoading) return <div className="p-6">Cargando datos de la clase...</div>;
-
-    return (
-        <div className="p-6 bg-gray-50 min-h-full animate-fade-in">
-            <div className="flex justify-between items-center mb-6">
-                <div><h2 className="text-2xl font-bold text-gray-800">{activityData.name}</h2><p className="text-gray-500">{activityData.day}, {activityData.time} - {today}</p></div>
-                <button onClick={onBack} className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300">Volver al horario</button>
-            </div>
-            <div className="grid md:grid-cols-2 gap-6">
-                <div className="bg-white p-6 rounded-lg shadow-md space-y-4">
-                    <div><label className="block text-lg font-semibold mb-2 text-gray-700">Planificación para hoy</label><textarea value={entry.planned} onChange={(e) => setEntry({ ...entry, planned: e.target.value })} placeholder="Ejercicios, teoría, actividades..." className="w-full p-2 border rounded-md h-32"/></div>
-                    <div><label className="block text-lg font-semibold mb-2 text-gray-700">Resumen de lo hecho</label><textarea value={entry.completed} onChange={(e) => setEntry({ ...entry, completed: e.target.value })} placeholder="¿Qué se ha hecho finalmente? ¿Ha habido incidencias?" className="w-full p-2 border rounded-md h-32"/></div>
-                </div>
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                    <h3 className="text-lg font-semibold mb-3">Anotaciones de Alumnos</h3>
-                    <div className="space-y-4 max-h-96 overflow-y-auto pr-2">{studentsInClass.length > 0 ? studentsInClass.map(student => (<div key={student.id}><label className="block font-medium text-gray-700">{student.name}</label><input type="text" value={entry.annotations?.[student.id] || ''} onChange={(e) => handleAnnotationChange(student.id, e.target.value)} placeholder="Comportamiento, dudas, trabajo..." className="w-full p-2 border rounded-md mt-1"/></div>)) : <p className="text-gray-500">No hay alumnos asignados a esta clase.</p>}</div>
-                </div>
-            </div>
-            <div className="mt-6"><button onClick={handleSave} className="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-lg"><Save size={20}/> Guardar Cambios de la Sesión</button></div>
-        </div>
-    );
-};
-
-export default function App() {
-    const [activeView, setActiveView] = useState('schedule');
-    const [db, setDb] = useState(null);
-    const [userId, setUserId] = useState(null);
-    const [isAuthReady, setIsAuthReady] = useState(false);
-    
-    const [activities, setActivities] = useState([]);
-    const [schedule, setSchedule] = useState({});
-    const [students, setStudents] = useState([]);
-    const [timeSlots, setTimeSlots] = useState([]);
-    const [selectedActivity, setSelectedActivity] = useState(null);
-
-    useEffect(() => {
-        try {
-            const app = initializeApp(firebaseConfig);
-            const firestoreDb = getFirestore(app);
-            const firebaseAuth = getAuth(app);
-            setDb(firestoreDb);
-            onAuthStateChanged(firebaseAuth, async (user) => {
-                if (user) {
-                    setUserId(user.uid);
-                } else {
-                    const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-                    try {
-                        const userCredential = token ? await signInWithCustomToken(firebaseAuth, token) : await signInAnonymously(firebaseAuth);
-                        setUserId(userCredential.user.uid);
-                    } catch (error) { console.error("Error en la autenticación:", error); }
-                }
-                setIsAuthReady(true);
+        // --- MANEJADORES DE EVENTOS ---
+        
+        function attachEventListeners() {
+            const elements = mainContent.querySelectorAll('[data-action]');
+            elements.forEach(el => {
+                const action = el.dataset.action;
+                el.onclick = (e) => handleAction(action, el, e);
             });
-        } catch (e) { console.error("Error al inicializar Firebase:", e); setIsAuthReady(true); }
-    }, []);
-
-    useEffect(() => {
-        if (!isAuthReady || !db || !userId) return;
-        const unsubActivities = onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/activities`), orderBy("name")), snapshot => setActivities(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const unsubSchedule = onSnapshot(doc(db, `artifacts/${appId}/users/${userId}/config/schedule`), (doc) => setSchedule(doc.exists() ? doc.data() : {}));
-        const unsubStudents = onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/students`), orderBy("name")), snapshot => setStudents(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        const unsubTimeSlots = onSnapshot(query(collection(db, `artifacts/${appId}/users/${userId}/timeSlots`), orderBy("order")), snapshot => setTimeSlots(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))));
-        return () => { unsubActivities(); unsubSchedule(); unsubStudents(); unsubTimeSlots(); };
-    }, [isAuthReady, db, userId]);
-
-    const handleActivitySelect = (activityData) => {
-        setSelectedActivity(activityData);
-        setActiveView('activityDetail');
-    };
-    
-    const handleBackToSchedule = () => {
-        setSelectedActivity(null);
-        setActiveView('schedule');
-    };
-
-    const renderView = () => {
-        if (!isAuthReady) return <div className="flex justify-center items-center h-full"><p>Cargando aplicación...</p></div>;
-        if (!db || !userId) return <div className="flex justify-center items-center h-full"><p className="text-red-500">Error: No se pudo conectar a la base de datos.</p></div>;
-
-        switch (activeView) {
-            case 'schedule': return <ScheduleView activities={activities} schedule={schedule} timeSlots={timeSlots} onActivitySelect={handleActivitySelect} />;
-            case 'activityDetail': return <ActivityDetailView db={db} userId={userId} activityData={selectedActivity} students={students} onBack={handleBackToSchedule} />;
-            case 'students': return <StudentsView db={db} userId={userId} />;
-            case 'settings': return <SettingsView db={db} userId={userId} />;
-            default: return <ScheduleView activities={activities} schedule={schedule} timeSlots={timeSlots} onActivitySelect={handleActivitySelect} />;
         }
-    };
 
-    const NavButton = ({ view, icon: Icon, label }) => (
-        <button onClick={() => { setSelectedActivity(null); setActiveView(view); }} className={`flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full p-3 text-sm font-medium rounded-md transition-colors ${activeView === view ? 'bg-blue-600 text-white' : 'text-gray-600 hover:bg-gray-200 hover:text-gray-900'}`}>
-            <Icon size={20} />
-            <span className="hidden sm:inline">{label}</span>
-        </button>
-    );
+        async function handleAction(action, element, event) {
+            const id = element.dataset.id;
+            switch(action) {
+                case 'add-activity': {
+                    const nameInput = document.getElementById('new-activity-name');
+                    const type = document.querySelector('input[name="activityType"]:checked').value;
+                    if (nameInput.value.trim() === '') return;
+                    await addDoc(collection(db, `artifacts/${appId}/users/${state.userId}/activities`), { 
+                        name: nameInput.value.trim(), type, studentIds: [] 
+                    });
+                    nameInput.value = '';
+                    break;
+                }
+                case 'delete-activity': {
+                    const modalContent = `
+                        <p>¿Seguro que quieres eliminar esta actividad? Esta acción no se puede deshacer.</p>
+                        <div class="flex justify-end gap-4 mt-6">
+                            <button class="modal-cancel-btn px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancelar</button>
+                            <button class="modal-confirm-btn px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Eliminar</button>
+                        </div>
+                    `;
+                    showModal('Confirmar Eliminación', modalContent, async () => {
+                        await deleteDoc(doc(db, `artifacts/${appId}/users/${state.userId}/activities`, id));
+                    });
+                    break;
+                }
+                case 'add-timeslot': {
+                    const labelInput = document.getElementById('new-timeslot-label');
+                    if (labelInput.value.trim() === '') return;
+                    const newOrder = state.timeSlots.length > 0 ? Math.max(...state.timeSlots.map(t => t.order)) + 1 : 0;
+                    await addDoc(collection(db, `artifacts/${appId}/users/${state.userId}/timeSlots`), { 
+                        label: labelInput.value.trim(), order: newOrder 
+                    });
+                    labelInput.value = '';
+                    break;
+                }
+                case 'delete-timeslot': {
+                    await deleteDoc(doc(db, `artifacts/${appId}/users/${state.userId}/timeSlots`, id));
+                    break;
+                }
+                case 'reorder-timeslot': {
+                    const index = parseInt(element.dataset.index, 10);
+                    const direction = element.dataset.direction;
+                    if ((direction === 'up' && index === 0) || (direction === 'down' && index === state.timeSlots.length - 1)) return;
+                    
+                    const batch = writeBatch(db);
+                    const currentSlot = state.timeSlots[index];
+                    const otherSlotIndex = direction === 'up' ? index - 1 : index + 1;
+                    const otherSlot = state.timeSlots[otherSlotIndex];
+                    
+                    batch.update(doc(db, `artifacts/${appId}/users/${state.userId}/timeSlots`, currentSlot.id), { order: otherSlot.order });
+                    batch.update(doc(db, `artifacts/${appId}/users/${state.userId}/timeSlots`, otherSlot.id), { order: currentSlot.order });
+                    await batch.commit();
+                    break;
+                }
+                case 'schedule-change': {
+                    const { day, time } = element.dataset;
+                    state.schedule[`${day}-${time}`] = element.value;
+                    break; // No guardamos hasta pulsar el botón
+                }
+                case 'save-schedule': {
+                    element.textContent = 'Guardando...';
+                    await setDoc(doc(db, `artifacts/${appId}/users/${state.userId}/config/schedule`), state.schedule);
+                    alert('Horario guardado con éxito.');
+                    element.innerHTML = '<i data-lucide="save" class="w-5 h-5"></i> Guardar Horario';
+                    lucide.createIcons();
+                    break;
+                }
+                 case 'toggle-student-in-class': {
+                    const { activityId, studentId } = element.dataset;
+                    const activityRef = doc(db, `artifacts/${appId}/users/${state.userId}/activities`, activityId);
+                    const activityDoc = await getDoc(activityRef);
+                    if (activityDoc.exists()) {
+                        const studentIds = activityDoc.data().studentIds || [];
+                        const newStudentIds = studentIds.includes(studentId) ? studentIds.filter(id => id !== studentId) : [...studentIds, studentId];
+                        await setDoc(activityRef, { studentIds: newStudentIds }, { merge: true });
+                    }
+                    break;
+                }
+            }
+        }
 
-    return (
-        <div className="flex h-screen bg-gray-100 font-sans">
-            <nav className="flex flex-col justify-between w-16 sm:w-56 bg-white border-r border-gray-200 p-3">
-                <div>
-                    <div className="flex items-center gap-3 mb-8 px-2"><BookUser className="text-blue-600" size={28}/><h1 className="text-xl font-bold text-gray-800 hidden sm:inline">Cuaderno del Profesor</h1></div>
-                    <div className="space-y-2">
-                        <NavButton view="schedule" icon={CalendarDays} label="Horario" />
-                        <NavButton view="students" icon={Users} label="Alumnos" />
-                        <NavButton view="settings" icon={Settings} label="Configuración" />
-                    </div>
-                </div>
-                <div className="text-xs text-gray-400 p-2 break-words"><span className="font-semibold">ID de Sesión:</span> {userId || 'Cargando...'}</div>
-            </nav>
-            <main className="flex-1 overflow-y-auto">{renderView()}</main>
-        </div>
-    );
-}
+        // --- INICIALIZACIÓN ---
+
+        function setupNav() {
+            navButtons.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    state.activeView = btn.dataset.view;
+                    state.selectedActivity = null;
+                    updateNavButtons();
+                    render();
+                });
+            });
+        }
+
+        function detachAllListeners() {
+            state.unsubscribe.forEach(unsub => unsub());
+            state.unsubscribe = [];
+        }
+
+        function attachDataListeners() {
+            detachAllListeners(); // Limpiar listeners anteriores
+            if (!db || !state.userId) return;
+
+            const unsubActivities = onSnapshot(query(collection(db, `artifacts/${appId}/users/${state.userId}/activities`), orderBy("name")), snapshot => {
+                state.activities = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            });
+            const unsubStudents = onSnapshot(query(collection(db, `artifacts/${appId}/users/${state.userId}/students`), orderBy("name")), snapshot => {
+                state.students = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            });
+            const unsubTimeSlots = onSnapshot(query(collection(db, `artifacts/${appId}/users/${state.userId}/timeSlots`), orderBy("order")), snapshot => {
+                state.timeSlots = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            });
+            const unsubSchedule = onSnapshot(doc(db, `artifacts/${appId}/users/${state.userId}/config/schedule`), (doc) => {
+                state.schedule = doc.exists() ? doc.data() : {};
+                render();
+            });
+            
+            state.unsubscribe.push(unsubActivities, unsubStudents, unsubTimeSlots, unsubSchedule);
+        }
+
+        async function init() {
+            lucide.createIcons();
+            setupNav();
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getFirestore(app);
+                auth = getAuth(app);
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        state.userId = user.uid;
+                    } else {
+                        const token = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+                        const userCredential = token ? await signInWithCustomToken(auth, token) : await signInAnonymously(auth);
+                        state.userId = userCredential.user.uid;
+                    }
+                    sessionIdEl.textContent = state.userId;
+                    state.isAuthReady = true;
+                    attachDataListeners(); // Adjuntar listeners una vez autenticado
+                });
+            } catch(e) {
+                console.error("Error al inicializar Firebase:", e);
+                state.isAuthReady = true;
+                render();
+            }
+        }
+
+        init();
+
+    </script>
+</body>
+</html>
