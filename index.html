@@ -20,13 +20,32 @@
           margin: 0; 
         }
         input[type=number] { -moz-appearance: textfield; }
+        
+        /* Estilos de impresión */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printable-schedule, #printable-schedule * {
+                visibility: visible;
+            }
+            #printable-schedule {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-100">
 
     <div class="flex h-screen">
         <!-- Sidebar de Navegación -->
-        <nav class="flex flex-col justify-between w-16 sm:w-56 bg-white border-r border-gray-200 p-3">
+        <nav class="flex flex-col justify-between w-16 sm:w-56 bg-white border-r border-gray-200 p-3 no-print">
             <div>
                 <div class="flex items-center gap-3 mb-8 px-2">
                     <div data-lucide="book-user" class="text-blue-600 w-7 h-7"></div>
@@ -56,7 +75,7 @@
     </div>
 
     <!-- Modal Genérico -->
-    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 hidden">
+    <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 hidden no-print">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto">
             <div class="flex justify-between items-center p-4 border-b">
                 <h3 id="modal-title" class="text-xl font-semibold text-gray-800"></h3>
@@ -83,6 +102,24 @@
             editingTimeSlotId: null,
             editingActivityId: null,
         };
+
+        const pastelColors = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4FF', '#BDB2FF', '#FFC6FF'];
+
+        function getRandomPastelColor() {
+            const usedColors = state.activities.map(a => a.color);
+            const availableColors = pastelColors.filter(c => !usedColors.includes(c));
+            return availableColors.length > 0 ? availableColors[0] : pastelColors[Math.floor(Math.random() * pastelColors.length)];
+        }
+
+        function darkenColor(hex, percent) {
+            if (!hex || typeof hex !== 'string') return '#000000';
+            let [r, g, b] = hex.match(/\w\w/g).map(x => parseInt(x, 16));
+            const amount = Math.floor(255 * (percent / 100));
+            r = Math.max(0, r - amount);
+            g = Math.max(0, g - amount);
+            b = Math.max(0, b - amount);
+            return `#${[r,g,b].map(x => x.toString(16).padStart(2, '0')).join('')}`;
+        }
 
         function saveState() {
             const dataToSave = {
@@ -149,10 +186,11 @@
                     const activityInfo = activityId ? getActivityById(activityId) : null;
                     let cellContent = `<div class="p-2 h-full min-h-[40px]"></div>`;
                     if (activityInfo) {
+                        const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
                         if (activityInfo.type === 'class') {
-                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${day}' data-time='${time.label}' class="w-full h-full p-2 rounded-md bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors text-sm font-semibold">${activityInfo.name}</button>`;
+                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${day}' data-time='${time.label}' class="w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}</button>`;
                         } else {
-                            cellContent = `<div class="w-full h-full p-2 rounded-md bg-green-100 text-green-800 text-sm font-semibold flex items-center justify-center">${activityInfo.name}</div>`;
+                            cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
                         }
                     }
                     return `<td class="p-1 border">${cellContent}</td>`;
@@ -162,12 +200,20 @@
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Horario Semanal</h2>
-                    <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
-                        <table class="w-full border-collapse text-center">
-                            <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${days.map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
-                            <tbody>${tableRows.length > 0 ? tableRows : '<tr><td colspan="6" class="p-4 text-gray-500">Añada franjas horarias en Configuración.</td></tr>'}</tbody>
-                        </table>
+                    <div class="flex justify-between items-center mb-6 no-print">
+                         <h2 class="text-2xl font-bold text-gray-800">Horario Semanal</h2>
+                         <button data-action="print-schedule" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
+                            <i data-lucide="printer" class="w-5 h-5"></i> Imprimir Horario
+                         </button>
+                    </div>
+                    <div id="printable-schedule">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block">Horario Semanal</h2>
+                        <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+                            <table class="w-full border-collapse text-center">
+                                <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${days.map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
+                                <tbody>${tableRows.length > 0 ? tableRows : '<tr><td colspan="6" class="p-4 text-gray-500">Añada franjas horarias en Configuración.</td></tr>'}</tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>`;
         }
@@ -234,7 +280,8 @@
                     return `
                     <div class="p-4 border rounded-md bg-white border-blue-500">
                         <div class="flex justify-between items-center">
-                            <input type="text" data-action="edit-activity-input" value="${act.name}" class="flex-grow p-1 border-0 rounded-md focus:ring-0 font-semibold">
+                            <input type="color" data-action="change-activity-color" data-id="${act.id}" value="${act.color}" class="p-0 border-none rounded-full cursor-pointer w-7 h-7">
+                            <input type="text" data-action="edit-activity-input" value="${act.name}" class="flex-grow p-1 mx-2 border-0 rounded-md focus:ring-0 font-semibold">
                             <div class="flex items-center gap-2">
                                 <button data-action="save-activity" data-id="${act.id}" class="text-green-600 hover:text-green-800"><i data-lucide="check" class="w-5 h-5"></i></button>
                                 <button data-action="cancel-edit-activity" class="text-red-600 hover:text-red-800"><i data-lucide="x" class="w-5 h-5"></i></button>
@@ -246,8 +293,11 @@
                 return `
                 <div class="p-4 border rounded-md">
                     <div class="flex justify-between items-center">
-                        <span class="font-semibold cursor-pointer flex-grow" data-action="edit-activity" data-id="${act.id}">${act.name} <span class="text-xs text-gray-500 font-normal">(${act.type === 'class' ? 'Clase' : 'General'})</span></span>
-                        <button data-action="delete-activity" data-id="${act.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                        <div class="flex items-center gap-2 flex-grow">
+                           <input type="color" data-action="change-activity-color" data-id="${act.id}" value="${act.color}" class="p-0 border-none rounded-full cursor-pointer w-7 h-7">
+                           <span class="font-semibold cursor-pointer" data-action="edit-activity" data-id="${act.id}">${act.name} <span class="text-xs text-gray-500 font-normal">(${act.type === 'class' ? 'Clase' : 'General'})</span></span>
+                        </div>
+                        <button data-action="delete-activity" data-id="${act.id}" class="text-red-500 hover:text-red-700 ml-2"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
                     </div>
                     ${studentsInClassHtml}
                 </div>`;
@@ -383,7 +433,7 @@
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
-                    <div class="flex justify-between items-center mb-6">
+                    <div class="flex justify-between items-center mb-6 no-print">
                         <div><h2 class="text-2xl font-bold text-gray-800">${name}</h2><p class="text-gray-500">${day}, ${time} - ${today}</p></div>
                         <button data-action="back-to-schedule" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300">Volver al horario</button>
                     </div>
@@ -397,7 +447,7 @@
                             <div class="space-y-4 max-h-96 overflow-y-auto pr-2">${annotationsHtml}</div>
                         </div>
                     </div>
-                    <div class="mt-6"><button data-action="save-class-entry" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-lg"><i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios de la Sesión</button></div>
+                    <div class="mt-6 no-print"><button data-action="save-class-entry" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 flex items-center justify-center gap-2 text-lg"><i data-lucide="save" class="w-5 h-5"></i> Guardar Cambios de la Sesión</button></div>
                 </div>
             `;
         }
@@ -452,12 +502,14 @@
                 case 'delete-all-data':
                 case 'import-data':
                 case 'save-class-entry':
+                case 'print-schedule':
                     if (actionHandlers[action]) actionHandlers[action](id, element, event);
                     break;
-                // Live input changes for class entry view
+                // Live input changes
                 case 'planned-change':
                 case 'completed-change':
                 case 'annotation-change':
+                case 'change-activity-color':
                     if (actionHandlers[action]) actionHandlers[action](id, element);
                     break;
                  // Live input changes for student edit view
@@ -517,7 +569,13 @@
                 const name = nameInput.value.trim();
                 const type = document.querySelector('input[name="activityType"]:checked').value;
                 if (name) {
-                    state.activities.push({ id: crypto.randomUUID(), name, type, studentIds: [] });
+                    state.activities.push({ 
+                        id: crypto.randomUUID(), 
+                        name, 
+                        type, 
+                        studentIds: [],
+                        color: getRandomPastelColor()
+                    });
                     nameInput.value = '';
                     saveState();
                 }
@@ -546,6 +604,17 @@
                     }
                 }
                 state.editingActivityId = null;
+            },
+            'change-activity-color': (id, element) => {
+                 const activity = state.activities.find(a => a.id === id);
+                 if(activity) {
+                    activity.color = element.value;
+                    saveState();
+                    // Live update color in schedule view if it's the current view
+                    if(state.activeView === 'schedule') {
+                        render();
+                    }
+                 }
             },
             'toggle-student-in-class': (id, element) => {
                 const { activityId, studentId } = element.dataset;
@@ -679,6 +748,9 @@
             'save-schedule': () => {
                 saveState();
                 alert('Horario guardado con éxito.');
+            },
+            'print-schedule': () => {
+                window.print();
             },
             'select-activity': (id, element) => {
                 const { activityId, day, time } = element.dataset;
