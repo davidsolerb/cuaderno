@@ -80,6 +80,7 @@
             classEntries: {},
             selectedActivity: null,
             editingStudentId: null,
+            editingTimeSlotId: null,
         };
 
         function saveState() {
@@ -235,16 +236,27 @@
                 </div>
             `).join('');
 
-            const timeSlotsHtml = state.timeSlots.map((slot, index) => `
-                <div class="flex justify-between items-center bg-gray-100 p-2 rounded-md">
-                    <span>${slot.label}</span>
-                    <div class="flex items-center gap-2">
-                        <button data-action="reorder-timeslot" data-index="${index}" data-direction="up" ${index === 0 ? 'disabled' : ''} class="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
-                        <button data-action="reorder-timeslot" data-index="${index}" data-direction="down" ${index === state.timeSlots.length - 1 ? 'disabled' : ''} class="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
-                        <button data-action="delete-timeslot" data-id="${slot.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
-                    </div>
-                </div>
-            `).join('');
+            const timeSlotsHtml = state.timeSlots.map((slot, index) => {
+                if (state.editingTimeSlotId === slot.id) {
+                    return `
+                    <div class="flex justify-between items-center bg-white p-2 rounded-md border border-blue-500">
+                        <input type="text" data-action="edit-timeslot-input" value="${slot.label}" class="flex-grow p-1 border-0 rounded-md focus:ring-0">
+                        <div class="flex items-center gap-2">
+                            <button data-action="save-timeslot" data-id="${slot.id}" class="text-green-600 hover:text-green-800"><i data-lucide="check" class="w-5 h-5"></i></button>
+                            <button data-action="cancel-edit-timeslot" class="text-red-600 hover:text-red-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+                        </div>
+                    </div>`;
+                }
+                return `
+                    <div class="flex justify-between items-center bg-gray-100 p-2 rounded-md">
+                        <span class="flex-grow cursor-pointer" data-action="edit-timeslot" data-id="${slot.id}">${slot.label}</span>
+                        <div class="flex items-center gap-2">
+                            <button data-action="reorder-timeslot" data-index="${index}" data-direction="up" ${index === 0 ? 'disabled' : ''} class="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><i data-lucide="chevron-up" class="w-5 h-5"></i></button>
+                            <button data-action="reorder-timeslot" data-index="${index}" data-direction="down" ${index === state.timeSlots.length - 1 ? 'disabled' : ''} class="disabled:opacity-25 disabled:cursor-not-allowed text-gray-600 hover:text-gray-900"><i data-lucide="chevron-down" class="w-5 h-5"></i></button>
+                            <button data-action="delete-timeslot" data-id="${slot.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                        </div>
+                    </div>`;
+            }).join('');
             
             const scheduleTableRows = state.timeSlots.map(time => {
                 const cells = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"].map(day => `
@@ -408,6 +420,9 @@
                 case 'select-activity':
                 case 'back-to-schedule':
                 case 'generate-schedule-slots':
+                case 'edit-timeslot':
+                case 'save-timeslot':
+                case 'cancel-edit-timeslot':
                     if (actionHandlers[action]) actionHandlers[action](id, element);
                     render();
                     break;
@@ -428,6 +443,7 @@
                  // Live input changes for student edit view
                 case 'edit-student-name-input':
                 case 'edit-student-notes-input':
+                case 'edit-timeslot-input':
                     // These are handled by the save button, no action needed on input
                     break;
                 // Schedule select change
@@ -516,6 +532,36 @@
             'delete-timeslot': (id) => {
                 state.timeSlots = state.timeSlots.filter(t => t.id !== id);
                 saveState();
+            },
+            'edit-timeslot': (id) => {
+                state.editingTimeSlotId = id;
+            },
+            'cancel-edit-timeslot': () => {
+                state.editingTimeSlotId = null;
+            },
+            'save-timeslot': (id) => {
+                const timeSlot = state.timeSlots.find(t => t.id === id);
+                if (timeSlot) {
+                    const input = document.querySelector(`input[data-action="edit-timeslot-input"]`);
+                    const oldLabel = timeSlot.label;
+                    const newLabel = input.value.trim();
+                    
+                    if (newLabel && oldLabel !== newLabel) {
+                        timeSlot.label = newLabel;
+
+                        // Update schedule keys that used the old label
+                        Object.keys(state.schedule).forEach(key => {
+                            if (key.endsWith(`-${oldLabel}`)) {
+                                const day = key.split('-')[0];
+                                const newKey = `${day}-${newLabel}`;
+                                state.schedule[newKey] = state.schedule[key];
+                                delete state.schedule[key];
+                            }
+                        });
+                        saveState();
+                    }
+                }
+                state.editingTimeSlotId = null;
             },
             'reorder-timeslot': (id, element) => {
                 const index = parseInt(element.dataset.index, 10);
