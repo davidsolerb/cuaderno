@@ -81,6 +81,7 @@
             selectedActivity: null,
             editingStudentId: null,
             editingTimeSlotId: null,
+            editingActivityId: null,
         };
 
         function saveState() {
@@ -215,13 +216,8 @@
         }
 
         function renderSettingsView() {
-             const activitiesHtml = state.activities.map(act => `
-                <div class="p-4 border rounded-md">
-                    <div class="flex justify-between items-center">
-                        <span class="font-semibold">${act.name} <span class="text-xs text-gray-500 font-normal">(${act.type === 'class' ? 'Clase' : 'General'})</span></span>
-                        <button data-action="delete-activity" data-id="${act.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
-                    </div>
-                    ${act.type === 'class' ? `
+             const activitiesHtml = state.activities.map(act => {
+                const studentsInClassHtml = act.type === 'class' ? `
                     <div class="mt-3">
                         <h4 class="text-sm font-medium mb-2">Alumnos en esta clase:</h4>
                         <div class="flex flex-wrap gap-2">
@@ -232,9 +228,30 @@
                                 </label>
                             `).join('')}
                         </div>
-                    </div>` : ''}
-                </div>
-            `).join('');
+                    </div>` : '';
+
+                if (state.editingActivityId === act.id) {
+                    return `
+                    <div class="p-4 border rounded-md bg-white border-blue-500">
+                        <div class="flex justify-between items-center">
+                            <input type="text" data-action="edit-activity-input" value="${act.name}" class="flex-grow p-1 border-0 rounded-md focus:ring-0 font-semibold">
+                            <div class="flex items-center gap-2">
+                                <button data-action="save-activity" data-id="${act.id}" class="text-green-600 hover:text-green-800"><i data-lucide="check" class="w-5 h-5"></i></button>
+                                <button data-action="cancel-edit-activity" class="text-red-600 hover:text-red-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                        </div>
+                        ${studentsInClassHtml}
+                    </div>`;
+                }
+                return `
+                <div class="p-4 border rounded-md">
+                    <div class="flex justify-between items-center">
+                        <span class="font-semibold cursor-pointer flex-grow" data-action="edit-activity" data-id="${act.id}">${act.name} <span class="text-xs text-gray-500 font-normal">(${act.type === 'class' ? 'Clase' : 'General'})</span></span>
+                        <button data-action="delete-activity" data-id="${act.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
+                    </div>
+                    ${studentsInClassHtml}
+                </div>`;
+            }).join('');
 
             const timeSlotsHtml = state.timeSlots.map((slot, index) => {
                 if (state.editingTimeSlotId === slot.id) {
@@ -423,6 +440,9 @@
                 case 'edit-timeslot':
                 case 'save-timeslot':
                 case 'cancel-edit-timeslot':
+                case 'edit-activity':
+                case 'save-activity':
+                case 'cancel-edit-activity':
                     if (actionHandlers[action]) actionHandlers[action](id, element);
                     render();
                     break;
@@ -444,6 +464,7 @@
                 case 'edit-student-name-input':
                 case 'edit-student-notes-input':
                 case 'edit-timeslot-input':
+                case 'edit-activity-input':
                     // These are handled by the save button, no action needed on input
                     break;
                 // Schedule select change
@@ -507,6 +528,24 @@
                     saveState();
                     render();
                 });
+            },
+            'edit-activity': (id) => {
+                state.editingActivityId = id;
+            },
+            'cancel-edit-activity': () => {
+                state.editingActivityId = null;
+            },
+            'save-activity': (id) => {
+                const activity = state.activities.find(a => a.id === id);
+                if (activity) {
+                    const input = document.querySelector(`input[data-action="edit-activity-input"]`);
+                    const newName = input.value.trim();
+                    if (newName) {
+                        activity.name = newName;
+                        saveState();
+                    }
+                }
+                state.editingActivityId = null;
             },
             'toggle-student-in-class': (id, element) => {
                 const { activityId, studentId } = element.dataset;
