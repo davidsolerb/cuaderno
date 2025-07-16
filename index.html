@@ -120,6 +120,7 @@
             timeSlots: [],
             schedule: {},
             classEntries: {},
+            currentDate: new Date(), // Fecha de referencia para la semana
             selectedActivity: null,
             editingStudentId: null,
             editingTimeSlotId: null,
@@ -166,6 +167,27 @@
                 state.classEntries = parsedData.classEntries || {};
             }
         }
+        
+        // --- HELPERS DE FECHAS ---
+        function getWeekStartDate(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+            return new Date(d.setDate(diff));
+        }
+
+        function formatDate(date, options = { year: 'numeric', month: '2-digit', day: '2-digit' }) {
+            return date.toLocaleDateString('sv-SE', options); // sv-SE format is YYYY-MM-DD
+        }
+
+        function getWeekDateRange(date) {
+            const startOfWeek = getWeekStartDate(date);
+            const endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 4);
+            const options = { month: 'short', day: 'numeric' };
+            return `${startOfWeek.toLocaleDateString('es-ES', options)} - ${endOfWeek.toLocaleDateString('es-ES', {...options, year: 'numeric'})}`;
+        }
+
 
         // --- LÓGICA DE RENDERIZADO ---
         const mainContent = document.getElementById('main-content');
@@ -202,21 +224,25 @@
         function renderScheduleView() {
             const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
             const getActivityById = (id) => state.activities.find(c => c.id === id);
-            const today = new Date().toISOString().split('T')[0];
+            const startOfWeek = getWeekStartDate(state.currentDate);
 
             const tableRows = state.timeSlots.map(time => {
-                const cells = days.map(day => {
-                    const activityId = state.schedule[`${day}-${time.label}`];
+                const cells = days.map((dayName, dayIndex) => {
+                    const cellDate = new Date(startOfWeek);
+                    cellDate.setDate(startOfWeek.getDate() + dayIndex);
+                    const formattedCellDate = formatDate(cellDate);
+
+                    const activityId = state.schedule[`${dayName}-${time.label}`];
                     const activityInfo = activityId ? getActivityById(activityId) : null;
                     let cellContent = `<div class="p-2 h-full min-h-[40px]"></div>`;
                     if (activityInfo) {
-                        const entryId = `${activityInfo.id}_${today}`;
+                        const entryId = `${activityInfo.id}_${formattedCellDate}`;
                         const hasPlan = state.classEntries[entryId] && state.classEntries[entryId].planned;
                         const planIndicator = hasPlan ? `<span class="absolute top-1 right-1 text-xs">📝</span>` : '';
 
                         const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
                         if (activityInfo.type === 'class') {
-                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${day}' data-time='${time.label}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}${planIndicator}</button>`;
+                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${dayName}' data-time='${time.label}' data-date='${formattedCellDate}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}${planIndicator}</button>`;
                         } else {
                             cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
                         }
@@ -230,12 +256,18 @@
                 <div class="p-6 bg-gray-50 min-h-full">
                     <div class="flex justify-between items-center mb-6 no-print">
                          <h2 class="text-2xl font-bold text-gray-800">Horario Semanal</h2>
-                         <button data-action="print-schedule" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
-                            <i data-lucide="printer" class="w-5 h-5"></i> Imprimir Horario
-                         </button>
+                         <div class="flex items-center gap-4">
+                            <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-left"></i></button>
+                            <span class="font-semibold text-lg">${getWeekDateRange(state.currentDate)}</span>
+                            <button data-action="next-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-right"></i></button>
+                            <button data-action="today" class="bg-gray-600 text-white px-3 py-2 text-sm rounded-md hover:bg-gray-700">Hoy</button>
+                            <button data-action="print-schedule" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
+                                <i data-lucide="printer" class="w-5 h-5"></i> Imprimir
+                            </button>
+                         </div>
                     </div>
                     <div id="printable-schedule">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block text-center">Horario Semanal</h2>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block text-center">Horario Semanal - ${getWeekDateRange(state.currentDate)}</h2>
                         <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
                             <table class="w-full border-collapse text-center">
                                 <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${days.map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
@@ -442,9 +474,8 @@
         }
 
         function renderActivityDetailView() {
-            const { name, day, time } = state.selectedActivity;
-            const today = new Date().toISOString().split('T')[0];
-            const entryId = `${state.selectedActivity.id}_${today}`;
+            const { name, day, time, date } = state.selectedActivity;
+            const entryId = `${state.selectedActivity.id}_${date}`;
             const entry = state.classEntries[entryId] || { planned: '', completed: '', annotations: {} };
             const studentsInClass = state.students.filter(s => state.selectedActivity.studentIds?.includes(s.id));
 
@@ -458,7 +489,10 @@
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
                     <div class="flex justify-between items-center mb-6 no-print">
-                        <div><h2 class="text-2xl font-bold text-gray-800">${name}</h2><p class="text-gray-500">${day}, ${time} - ${today}</p></div>
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">${name}</h2>
+                            <p class="text-gray-500">${day}, ${new Date(date + 'T00:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'long', year: 'numeric'})} (${time})</p>
+                        </div>
                         <button data-action="back-to-schedule" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300">Volver al horario</button>
                     </div>
                     <div class="grid md:grid-cols-2 gap-6">
@@ -513,6 +547,9 @@
                 case 'edit-activity':
                 case 'save-activity':
                 case 'cancel-edit-activity':
+                case 'prev-week':
+                case 'next-week':
+                case 'today':
                     if (actionHandlers[action]) actionHandlers[action](id, element);
                     render();
                     break;
@@ -774,36 +811,46 @@
                 window.print();
             },
             'select-activity': (id, element) => {
-                const { activityId, day, time } = element.dataset;
+                const { activityId, day, time, date } = element.dataset;
                 const activityInfo = state.activities.find(a => a.id === activityId);
-                state.selectedActivity = { ...activityInfo, day, time };
+                state.selectedActivity = { ...activityInfo, day, time, date };
                 state.activeView = 'activityDetail';
             },
             'back-to-schedule': () => {
                 state.selectedActivity = null;
                 state.activeView = 'schedule';
             },
+            'prev-week': () => {
+                state.currentDate.setDate(state.currentDate.getDate() - 7);
+            },
+            'next-week': () => {
+                state.currentDate.setDate(state.currentDate.getDate() + 7);
+            },
+            'today': () => {
+                state.currentDate = new Date();
+            },
             // --- Class Entry Actions ---
             'planned-change': (id, element) => {
-                const entryId = `${state.selectedActivity.id}_${new Date().toISOString().split('T')[0]}`;
+                const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
                 if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
                 state.classEntries[entryId].planned = element.value;
             },
             'completed-change': (id, element) => {
-                const entryId = `${state.selectedActivity.id}_${new Date().toISOString().split('T')[0]}`;
+                const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
                 if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
                 state.classEntries[entryId].completed = element.value;
             },
             'annotation-change': (id, element) => {
                 const { studentId } = element.dataset;
-                const entryId = `${state.selectedActivity.id}_${new Date().toISOString().split('T')[0]}`;
+                const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
                 if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
                 state.classEntries[entryId].annotations[studentId] = element.value;
             },
             'save-class-entry': () => {
                 saveState();
                 alert('Datos de la sesión guardados.');
-                render(); // Re-render to show plan indicator
+                actionHandlers['back-to-schedule']();
+                render();
             },
             // --- Data Management Actions ---
             'import-students': () => {
