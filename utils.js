@@ -1,6 +1,7 @@
 // utils.js: Contiene funciones de ayuda reutilizables.
 
 import { state } from './state.js';
+import { t } from './i18n.js'; // Importamos la función de traducción
 
 export function darkenColor(hex, percent) {
     if (!hex || typeof hex !== 'string') return '#000000';
@@ -28,7 +29,8 @@ export function getWeekDateRange(date) {
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 4);
     const options = { month: 'short', day: 'numeric' };
-    return `${startOfWeek.toLocaleDateString('es-ES', options)} - ${endOfWeek.toLocaleDateString('es-ES', {...options, year: 'numeric'})}`;
+    const lang = document.documentElement.lang || 'es';
+    return `${startOfWeek.toLocaleDateString(lang, options)} - ${endOfWeek.toLocaleDateString(lang, {...options, year: 'numeric'})}`;
 }
 
 export function isSameDate(date1, date2) {
@@ -95,8 +97,8 @@ export function showModal(title, content, onConfirm) {
     modalTitle.textContent = title;
     modalBody.innerHTML = `<p>${content}</p>
         <div class="flex justify-end gap-4 mt-6">
-            <button id="modal-cancel" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">Cancelar</button>
-            <button id="modal-confirm" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Confirmar</button>
+            <button id="modal-cancel" class="px-4 py-2 bg-gray-200 rounded-md hover:bg-gray-300">${t('modal_cancel')}</button>
+            <button id="modal-confirm" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">${t('modal_confirm')}</button>
         </div>`;
     
     const close = () => modalContainer.classList.add('hidden');
