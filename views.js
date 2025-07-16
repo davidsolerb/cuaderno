@@ -1,11 +1,12 @@
 // views.js: Contiene todas las funciones que generan el HTML de las vistas.
 
 import { state } from './state.js';
-import { darkenColor, getWeekStartDate, getWeekDateRange, formatDate, isSameDate, findNextSession, findPreviousSession } from './utils.js';
+import { darkenColor, getWeekStartDate, getWeekDateRange, formatDate, isSameDate, findNextSession, findPreviousSession, DAY_KEYS } from './utils.js';
 import { t } from './i18n.js'; // Importamos la función de traducción
 
 export function renderScheduleView() {
-    const days = [t('monday'), t('tuesday'), t('wednesday'), t('thursday'), t('friday')];
+    // Usar las claves neutras para generar los nombres de los días traducidos
+    const days = DAY_KEYS.map(dayKey => t(dayKey.toLowerCase()));
     const getActivityById = (id) => state.activities.find(c => c.id === id);
     const startOfWeek = getWeekStartDate(state.currentDate);
     const today = new Date();
@@ -14,7 +15,7 @@ export function renderScheduleView() {
         const cellDate = new Date(startOfWeek);
         cellDate.setDate(startOfWeek.getDate() + dayIndex);
         const isToday = isSameDate(cellDate, today);
-        const formattedDate = cellDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+        const formattedDate = cellDate.toLocaleDateString(document.documentElement.lang, { day: '2-digit', month: '2-digit' });
         return `<th class="p-2 border ${isToday ? 'bg-blue-100' : ''}">
                     <div>${dayName}</div>
                     <div class="text-xs font-normal text-gray-500">${formattedDate}</div>
@@ -22,8 +23,7 @@ export function renderScheduleView() {
     }).join('');
 
     const tableRows = state.timeSlots.map(time => {
-        const dayKeys = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"]; // Se usan las claves en español para buscar en el state.schedule
-        const cells = dayKeys.map((dayKey, dayIndex) => {
+        const cells = DAY_KEYS.map((dayKey, dayIndex) => {
             const cellDate = new Date(startOfWeek);
             cellDate.setDate(startOfWeek.getDate() + dayIndex);
             const formattedCellDate = formatDate(cellDate);
@@ -82,16 +82,15 @@ export function renderScheduleView() {
             <div class="flex justify-between items-center mb-6 no-print">
                  <h2 class="text-2xl font-bold text-gray-800">${t('schedule_view_title')}</h2>
                  <div class="flex items-center gap-2">
-                    <!-- BOTONES MOVIDOS Y REDISEÑADOS -->
                     <button data-action="export-data" class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center gap-2">
-                        <i data-lucide="save" class="w-5 h-5"></i> <span data-i18n-key="save_file">Guardar</span>
+                        <i data-lucide="save" class="w-5 h-5"></i> <span>${t('save_file')}</span>
                     </button>
                     <label class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center gap-2 cursor-pointer">
-                        <i data-lucide="folder-open" class="w-5 h-5"></i> <span data-i18n-key="open_file">Abrir</span>
+                        <i data-lucide="folder-open" class="w-5 h-5"></i> <span>${t('open_file')}</span>
                         <input type="file" id="import-file-input" accept=".json" class="hidden"/>
                     </label>
                     
-                    <div class="w-px h-6 bg-gray-300 mx-2"></div> <!-- Separador visual -->
+                    <div class="w-px h-6 bg-gray-300 mx-2"></div>
 
                     <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-left"></i></button>
                     <span class="font-semibold text-lg">${getWeekDateRange(state.currentDate)}</span>
@@ -336,9 +335,8 @@ export function renderSettingsView() {
             </div>`;
     }).join('');
     
-    const dayKeys = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
     const scheduleTableRows = state.timeSlots.map(time => {
-        const cells = dayKeys.map(day => `
+        const cells = DAY_KEYS.map(day => `
             <td class="p-1 border">
                 <select data-action="schedule-change" data-day="${day}" data-time="${time.label}" class="w-full p-1 border-0 rounded-md focus:ring-1 focus:ring-blue-500 text-xs">
                     <option value="">${t('free')}</option>
@@ -354,7 +352,7 @@ export function renderSettingsView() {
         return `
             <div class="text-sm p-2 bg-gray-100 rounded-md flex justify-between items-center">
                 <div>
-                    <span class="font-semibold">${ov.day} ${ov.time}</span> <i data-lucide="arrow-right" class="inline-block w-4 h-4"></i> <span class="font-semibold">${activity ? activity.name : 'Clase eliminada'}</span>
+                    <span class="font-semibold">${t(ov.day.toLowerCase())} ${ov.time}</span> <i data-lucide="arrow-right" class="inline-block w-4 h-4"></i> <span class="font-semibold">${activity ? activity.name : 'Clase eliminada'}</span>
                     <div class="text-xs text-gray-600">${ov.startDate} a ${ov.endDate}</div>
                 </div>
                 <button data-action="delete-schedule-override" data-id="${ov.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
@@ -431,7 +429,7 @@ export function renderSettingsView() {
                         <h3 class="text-lg font-semibold mb-3">${t('weekly_schedule_config_title')}</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full border-collapse text-sm">
-                                <thead><tr class="bg-gray-100"><th class="p-2 border">${t('hour')}</th>${dayKeys.map(day => `<th class="p-2 border">${t(day.toLowerCase())}</th>`).join('')}</tr></thead>
+                                <thead><tr class="bg-gray-100"><th class="p-2 border">${t('hour')}</th>${DAY_KEYS.map(day => `<th class="p-2 border">${t(day.toLowerCase())}</th>`).join('')}</tr></thead>
                                 <tbody>${scheduleTableRows}</tbody>
                             </table>
                         </div>
@@ -441,7 +439,7 @@ export function renderSettingsView() {
                         <h3 class="text-lg font-semibold mb-3">${t('schedule_overrides_title')}</h3>
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label class="block text-sm font-medium">${t('day')}</label><select id="override-day" class="w-full p-2 border rounded-md">${dayKeys.map(day => `<option>${t(day.toLowerCase())}</option>`).join('')}</select></div>
+                                <div><label class="block text-sm font-medium">${t('day')}</label><select id="override-day" class="w-full p-2 border rounded-md">${DAY_KEYS.map(day => `<option value="${day}">${t(day.toLowerCase())}</option>`).join('')}</select></div>
                                 <div><label class="block text-sm font-medium">${t('timeslot')}</label><select id="override-time" class="w-full p-2 border rounded-md">${state.timeSlots.map(t => `<option>${t.label}</option>`).join('')}</select></div>
                             </div>
                             <div><label class="block text-sm font-medium">${t('replace_with')}</label><select id="override-activity" class="w-full p-2 border rounded-md">${state.activities.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}</select></div>
@@ -453,8 +451,6 @@ export function renderSettingsView() {
                         </div>
                         <div class="mt-6 space-y-2">${scheduleOverridesHtml}</div>
                     </div>
-                     <!-- Copia de Seguridad y Zona de Peligro -->
-                    <!-- SECCIÓN ELIMINADA DE AQUÍ -->
                     <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
                         <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> ${t('danger_zone_title')}</h3>
                         <button data-action="delete-all-data" class="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center gap-2"><i data-lucide="trash-2" class="w-5 h-5"></i> ${t('delete_all_data')}</button>
