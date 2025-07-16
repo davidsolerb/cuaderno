@@ -2,6 +2,7 @@
 
 import { state, saveState, getRandomPastelColor } from './state.js';
 import { showModal } from './utils.js';
+import { t } from './i18n.js'; // Importamos la función de traducción
 
 export const actionHandlers = {
     // --- Student Actions ---
@@ -96,10 +97,9 @@ export const actionHandlers = {
         }
     },
     'delete-activity': (id) => {
-        showModal('Confirmar Eliminación', '¿Seguro que quieres eliminar esta actividad?', () => {
+        showModal(t('delete_activity_confirm_title'), t('delete_activity_confirm_text'), () => {
             state.activities = state.activities.filter(a => a.id !== id);
             saveState();
-            // Re-render is handled by main.js
             document.dispatchEvent(new CustomEvent('render'));
         });
     },
@@ -194,7 +194,7 @@ export const actionHandlers = {
         const breakStartTimeStr = document.getElementById('gen-break-start').value;
 
         if (!startTimeStr || !endTimeStr || isNaN(classDuration)) {
-            alert('Por favor, rellena la hora de inicio, fin y la duración de la clase.');
+            alert(t('generate_schedule_alert'));
             return;
         }
 
@@ -252,7 +252,7 @@ export const actionHandlers = {
         const endDate = document.getElementById('override-end-date').value;
 
         if (!day || !time || !activityId || !startDate || !endDate) {
-            alert('Por favor, completa todos los campos de la sustitución.');
+            alert(t('add_override_alert'));
             return;
         }
         
@@ -328,7 +328,7 @@ export const actionHandlers = {
         const studentListText = studentListTextEl.value;
         const activity = state.activities.find(a => a.id === targetClassId);
         if (!activity || studentListText.trim() === '') {
-            alert("Selecciona una clase y pega la lista del alumnado.");
+            alert(t('import_students_alert'));
             return;
         }
 
@@ -373,7 +373,7 @@ export const actionHandlers = {
     'import-data': (id, element, event) => {
         const file = event.target.files[0];
         if (!file) return;
-        showModal('Confirmar Importación', 'Importar un archivo reemplazará todos los datos actuales. ¿Estás seguro?', () => {
+        showModal(t('import_data_confirm_title'), t('import_data_confirm_text'), () => {
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
@@ -387,19 +387,19 @@ export const actionHandlers = {
                     state.courseStartDate = data.courseStartDate || '';
                     state.courseEndDate = data.courseEndDate || '';
                     saveState();
-                    alert('Datos importados con éxito.');
+                    alert(t('import_success_alert'));
                     window.location.reload();
                 } catch (error) {
-                    alert('Error al importar el archivo.');
+                    alert(t('import_error_alert'));
                 }
             };
             reader.readAsText(file);
         });
     },
     'delete-all-data': () => {
-        showModal('Borrar Todos los Datos', 'Esta acción es irreversible y borrará todos los datos de la aplicación. ¿Estás seguro?', () => {
+        showModal(t('delete_all_data_confirm_title'), t('delete_all_data_confirm_text'), () => {
             localStorage.removeItem('teacherDashboardData');
-            alert('Todos los datos han sido borrados.');
+            alert(t('delete_all_data_success_alert'));
             window.location.reload();
         });
     },
