@@ -437,18 +437,40 @@
 
         function renderSettingsView() {
              const activitiesHtml = state.activities.map(act => {
-                const studentsInClassHtml = act.type === 'class' ? `
-                    <div class="mt-3">
-                        <h4 class="text-sm font-medium mb-2">Alumnos en esta clase:</h4>
-                        <div class="flex flex-wrap gap-2">
-                            ${state.students.map(student => `
-                                <label class="flex items-center gap-2 text-sm p-2 bg-gray-100 rounded-md">
-                                    <input type="checkbox" data-action="toggle-student-in-class" data-activity-id="${act.id}" data-student-id="${student.id}" class="rounded" ${act.studentIds?.includes(student.id) ? 'checked' : ''}>
-                                    ${student.name}
-                                </label>
-                            `).join('')}
+                let studentsInClassHtml = '';
+                if (act.type === 'class') {
+                    const enrolledStudents = state.students.filter(s => act.studentIds?.includes(s.id));
+                    const enrolledStudentsHtml = enrolledStudents.map(student => `
+                        <div class="flex items-center justify-between bg-gray-100 p-2 rounded-md text-sm">
+                            <span>${student.name}</span>
+                            <button data-action="remove-student-from-class" data-activity-id="${act.id}" data-student-id="${student.id}" class="text-red-500 hover:text-red-700"><i data-lucide="x" class="w-4 h-4"></i></button>
                         </div>
-                    </div>` : '';
+                    `).join('');
+
+                    const availableStudents = state.students.filter(s => !act.studentIds?.includes(s.id));
+                    const availableStudentsOptions = availableStudents.map(student => `<option value="${student.id}">${student.name}</option>`).join('');
+
+                    studentsInClassHtml = `
+                        <div class="mt-3 space-y-3">
+                            <div>
+                                <h4 class="text-sm font-medium mb-2">Alumnos en esta clase:</h4>
+                                <div class="space-y-2">
+                                    ${enrolledStudents.length > 0 ? enrolledStudentsHtml : '<p class="text-xs text-gray-500">No hay alumnos asignados.</p>'}
+                                </div>
+                            </div>
+                            <div class="border-t pt-3">
+                                <h4 class="text-sm font-medium mb-2">Añadir alumno existente:</h4>
+                                <div class="flex gap-2">
+                                    <select id="add-student-select-${act.id}" class="flex-grow p-2 border rounded-md text-sm bg-white">
+                                        <option value="">Seleccionar alumno...</option>
+                                        ${availableStudentsOptions}
+                                    </select>
+                                    <button data-action="add-selected-student-to-class" data-activity-id="${act.id}" class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 flex-shrink-0"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
 
                 if (state.editingActivityId === act.id) {
                     return `
@@ -650,21 +672,10 @@
                 'add-timeslot', 'delete-timeslot', 'reorder-timeslot', 'import-students',
                 'select-activity', 'back-to-schedule', 'generate-schedule-slots', 'edit-timeslot',
                 'save-timeslot', 'cancel-edit-timeslot', 'edit-activity', 'save-activity',
-                'cancel-edit-activity', 'prev-week', 'next-week', 'today', 'select-student', 'back-to-classes'
+                'cancel-edit-activity', 'prev-week', 'next-week', 'today', 'select-student', 'back-to-classes',
+                'add-selected-student-to-class'
             ];
             
-            // Acciones que solo guardan o realizan una acción puntual
-            const singleActions = [
-                'export-data', 'delete-all-data', 'import-data', 'print-schedule', 'print-student-sheet'
-            ];
-
-            // Acciones que modifican el estado y guardan al instante (sin re-renderizar)
-            const liveSaveActions = [
-                'planned-change', 'completed-change', 'annotation-change', 'change-activity-color',
-                'edit-session-annotation', 'edit-student-name', 'edit-student-notes', 'schedule-change',
-                'toggle-student-in-class'
-            ];
-
             if (actionHandlers[action]) {
                 actionHandlers[action](id, element, event);
             }
@@ -698,6 +709,17 @@
                 
                 nameInput.value = '';
                 saveState();
+            },
+            'add-selected-student-to-class': (id, element) => {
+                const activityId = element.dataset.activityId;
+                const activity = state.activities.find(a => a.id === activityId);
+                const selectEl = document.getElementById(`add-student-select-${activityId}`);
+                const studentId = selectEl.value;
+
+                if (activity && studentId && !activity.studentIds?.includes(studentId)) {
+                    activity.studentIds.push(studentId);
+                    saveState();
+                }
             },
             'remove-student-from-class': (id, element) => {
                 const { activityId, studentId } = element.dataset;
@@ -783,24 +805,10 @@
                  if(activity) {
                     activity.color = element.value;
                     saveState();
-                    if(state.activeView === 'schedule' || state.activeView === 'classes') {
+                    if(state.activeView === 'schedule' || state.activeView === 'classes' || state.activeView === 'settings') {
                         render();
                     }
                  }
-            },
-            'toggle-student-in-class': (id, element) => {
-                const { activityId, studentId } = element.dataset;
-                const activity = state.activities.find(a => a.id === activityId);
-                if (activity) {
-                    const studentIds = activity.studentIds || [];
-                    const isChecked = element.checked;
-                    if (isChecked) {
-                         if (!studentIds.includes(studentId)) activity.studentIds.push(studentId);
-                    } else {
-                        activity.studentIds = studentIds.filter(sid => sid !== studentId);
-                    }
-                    saveState();
-                }
             },
             // --- TimeSlot Actions ---
             'add-timeslot': () => {
@@ -956,9 +964,13 @@
             // --- Data Management Actions ---
             'import-students': () => {
                 const targetClassId = document.getElementById('import-target-class').value;
-                const studentListText = document.getElementById('student-list-text').value;
+                const studentListTextEl = document.getElementById('student-list-text');
+                const studentListText = studentListTextEl.value;
                 const activity = state.activities.find(a => a.id === targetClassId);
-                if (!activity || studentListText.trim() === '') return alert("Selecciona una clase y pega una lista de alumnos.");
+                if (!activity || studentListText.trim() === '') {
+                    alert("Selecciona una clase y pega una lista de alumnos.");
+                    return;
+                }
 
                 const names = studentListText.trim().split('\n').filter(name => name.trim() !== '');
                 
@@ -976,6 +988,7 @@
                     }
                 });
                 
+                studentListTextEl.value = '';
                 saveState();
             },
             'export-data': () => {
