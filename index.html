@@ -27,6 +27,9 @@
 
         /* Estilos de impresión */
         @media print {
+            body {
+                font-family: 'Times New Roman', serif; /* Tipografía clásica para informes */
+            }
             body * {
                 visibility: hidden;
             }
@@ -39,35 +42,115 @@
                 top: 0;
                 width: 100%;
                 margin: 0;
-                padding: 20px;
-                font-size: 12px;
+                padding: 40px;
+                font-size: 12pt;
+                color: #000;
+                background-color: white;
             }
-            .printable-area table {
+            .no-print {
+                display: none !important;
+            }
+
+            /* --- Estilos para la Ficha del Alumnado --- */
+            #student-sheet-content {
+                box-shadow: none !important;
+                border: none !important;
+                padding: 0 !important;
+            }
+            #student-sheet-content h2.print\:block {
+                display: block !important;
+                text-align: center;
+                font-size: 22pt;
+                margin-bottom: 40px;
+                border-bottom: 1px solid #000;
+                padding-bottom: 10px;
+            }
+            #student-sheet-content h3 {
+                font-size: 16pt;
+                font-weight: bold;
+                margin-top: 25px;
+                margin-bottom: 15px;
+                border-bottom: 1px solid #ccc;
+                padding-bottom: 5px;
+            }
+            #student-sheet-content label {
+                font-weight: bold;
+                font-size: 14pt;
+                margin-bottom: 8px;
+                display: block;
+            }
+            #student-sheet-content input[type="text"],
+            #student-sheet-content textarea {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                border: none !important;
+                background: transparent !important;
+                box-shadow: none !important;
+                padding: 0 !important;
+                width: 100%;
+                font-family: 'Times New Roman', serif;
+                font-size: 12pt;
+                line-height: 1.5;
+                color: #333;
+                resize: none;
+                height: auto;
+            }
+            #student-sheet-content textarea {
+                display: block;
+                white-space: pre-wrap; /* Respeta los saltos de línea */
+                padding-top: 5px !important;
+            }
+            #student-sheet-content ul {
+                list-style-position: inside;
+                padding-left: 0;
+            }
+            #student-sheet-content li {
+                background: transparent !important;
+                padding: 4px 0 !important;
+                border-bottom: 1px dotted #ccc;
+            }
+            #student-sheet-content li:last-child {
+                border-bottom: none;
+            }
+            #student-sheet-content .p-3.bg-gray-50 {
+                background: transparent !important;
+                padding: 15px 0 !important;
+                border-top: 1px solid #eee;
+            }
+            #student-sheet-content .p-3.bg-gray-50:first-child {
+                border-top: none;
+            }
+            #student-sheet-content .flex.items-center.gap-2.mb-2 {
+                font-weight: bold;
+            }
+            #student-sheet-content .w-3.h-3.rounded-full, #student-sheet-content .w-4.h-4.rounded-full {
+                display: none; /* Oculta los puntos de color */
+            }
+
+            /* --- Estilos Generales de Impresión (para Horario) --- */
+            #printable-schedule table {
                 width: 100%;
                 table-layout: fixed;
-                font-size: 9px;
+                font-size: 9pt;
                 border-spacing: 0;
+                border-collapse: collapse;
             }
-            .printable-area th, .printable-area td {
-                padding: 4px 2px;
+            #printable-schedule th, #printable-schedule td {
+                border: 1px solid #ccc;
+                padding: 6px 4px;
                 word-wrap: break-word;
             }
-             .printable-area button, .printable-area div[style*="background-color"] {
-                font-size: 8px !important;
+            #printable-schedule button, #printable-schedule div[style*="background-color"] {
+                border: 1px solid #ccc !important;
+                background-color: #f0f0f0 !important;
+                color: #000 !important;
+                font-size: 8pt !important;
                 padding: 2px !important;
                 min-height: 0 !important;
                 white-space: normal !important;
                 line-height: 1.2 !important;
                 height: 100% !important;
-                border: 1px solid #ccc;
-            }
-            .printable-area textarea {
-                border: 1px solid #ddd !important;
-                padding: 4px;
-                background-color: #fafafa !important;
-            }
-            .no-print {
-                display: none !important;
             }
         }
     </style>
@@ -312,7 +395,7 @@
         function renderClassesView() {
             const classes = state.activities.filter(a => a.type === 'class');
             if (classes.length === 0) {
-                return `<div class="p-6"><h2 class="text-2xl font-bold text-gray-800 mb-6">Clases y Alumnos</h2><p class="text-gray-500">No hay clases creadas. Ve a Configuración para añadir una.</p></div>`;
+                return `<div class="p-6"><h2 class="text-2xl font-bold text-gray-800 mb-6">Clases y Alumnado</h2><p class="text-gray-500">No hay clases creadas. Ve a Configuración para añadir una.</p></div>`;
             }
 
             const classesHtml = classes.map(c => {
@@ -328,10 +411,10 @@
                 <div class="bg-white p-6 rounded-lg shadow-md">
                     <h3 class="text-xl font-bold text-gray-800 mb-4" style="color: ${darkenColor(c.color, 40)}">${c.name}</h3>
                     <div class="space-y-2 mb-4">
-                        ${studentsHtml || '<p class="text-sm text-gray-500">No hay alumnos en esta clase.</p>'}
+                        ${studentsHtml || '<p class="text-sm text-gray-500">No hay alumnado en esta clase.</p>'}
                     </div>
                     <div class="flex gap-2 border-t pt-4">
-                        <input type="text" id="new-student-name-${c.id}" placeholder="Añadir alumno a esta clase" class="flex-grow p-2 border rounded-md">
+                        <input type="text" id="new-student-name-${c.id}" placeholder="Añadir estudiante" class="flex-grow p-2 border rounded-md">
                         <button data-action="add-student-to-class" data-activity-id="${c.id}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"><i data-lucide="plus" class="w-5 h-5"></i></button>
                     </div>
                 </div>
@@ -340,7 +423,7 @@
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Clases y Alumnos</h2>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Clases y Alumnado</h2>
                     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${classesHtml}
                     </div>
@@ -351,7 +434,7 @@
         function renderStudentDetailView() {
             const student = state.students.find(s => s.id === state.selectedStudentId);
             if (!student) {
-                return `<div class="p-6"><p class="text-red-500">Error: Alumno no encontrado.</p><button data-action="back-to-classes">Volver</button></div>`;
+                return `<div class="p-6"><p class="text-red-500">Error: Estudiante no encontrado.</p><button data-action="back-to-classes">Volver</button></div>`;
             }
 
             const enrolledClasses = state.activities.filter(a => a.type === 'class' && a.studentIds?.includes(student.id));
@@ -363,7 +446,7 @@
                         <span>${c.name}</span>
                     </li>
                 `).join('')
-                : '<p class="text-gray-500">Este alumno no está en ninguna clase.</p>';
+                : '<p class="text-gray-500">Este/a estudiante no está en ninguna clase.</p>';
             
             const studentAnnotations = Object.entries(state.classEntries)
                 .map(([entryId, entryData]) => {
@@ -395,12 +478,12 @@
                         <textarea data-action="edit-session-annotation" data-entry-id="${item.entryId}" data-student-id="${student.id}" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-24">${item.annotation}</textarea>
                     </div>
                 `).join('')
-                : '<p class="text-gray-500">No hay anotaciones específicas de sesión para este alumno.</p>';
+                : '<p class="text-gray-500">No hay anotaciones específicas de sesión para este/a estudiante.</p>';
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
                     <div class="flex justify-between items-center mb-6 no-print">
-                        <h2 class="text-2xl font-bold text-gray-800">Ficha del Alumno</h2>
+                        <h2 class="text-2xl font-bold text-gray-800">Ficha de Estudiante</h2>
                         <div class="flex items-center gap-2">
                              <button data-action="print-student-sheet" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
                                 <i data-lucide="printer"></i> Imprimir
@@ -414,16 +497,16 @@
                         <h2 class="text-2xl font-bold text-gray-800 mb-6 print:block hidden">${student.name}</h2>
                         <div class="space-y-6">
                             <div>
-                                <label for="edit-student-name" class="block text-sm font-medium text-gray-700">Nombre del Alumno</label>
+                                <label for="edit-student-name" class="block text-sm font-medium text-gray-700">Nombre del/de la Estudiante</label>
                                 <input type="text" id="edit-student-name" data-action="edit-student-name" data-student-id="${student.id}" value="${student.name}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
                             </div>
                             <div>
-                                <h3 class="text-lg font-medium text-gray-900 mb-2">Clases en las que está inscrito</h3>
+                                <h3 class="text-lg font-medium text-gray-900 mb-2">Clases en las que está inscrito/a</h3>
                                 <ul class="space-y-2">${classesHtml}</ul>
                             </div>
                             <div>
                                 <label for="edit-student-notes" class="block text-sm font-medium text-gray-700">Anotaciones Generales</label>
-                                <textarea id="edit-student-notes" data-action="edit-student-notes" data-student-id="${student.id}" placeholder="Anotaciones sobre el alumno que no son específicas de una sesión..." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32">${student.generalNotes || ''}</textarea>
+                                <textarea id="edit-student-notes" data-action="edit-student-notes" data-student-id="${student.id}" placeholder="Anotaciones sobre el/la estudiante que no son específicas de una sesión..." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32">${student.generalNotes || ''}</textarea>
                             </div>
                             <div class="border-t pt-6">
                                 <h3 class="text-lg font-medium text-gray-900 mb-3">Historial de Anotaciones por Sesión</h3>
@@ -453,16 +536,16 @@
                     studentsInClassHtml = `
                         <div class="mt-3 space-y-3">
                             <div>
-                                <h4 class="text-sm font-medium mb-2">Alumnos en esta clase:</h4>
+                                <h4 class="text-sm font-medium mb-2">Alumnado en esta clase:</h4>
                                 <div class="space-y-2">
-                                    ${enrolledStudents.length > 0 ? enrolledStudentsHtml : '<p class="text-xs text-gray-500">No hay alumnos asignados.</p>'}
+                                    ${enrolledStudents.length > 0 ? enrolledStudentsHtml : '<p class="text-xs text-gray-500">No hay alumnado asignado.</p>'}
                                 </div>
                             </div>
                             <div class="border-t pt-3">
-                                <h4 class="text-sm font-medium mb-2">Añadir alumno existente:</h4>
+                                <h4 class="text-sm font-medium mb-2">Añadir estudiante existente:</h4>
                                 <div class="flex gap-2">
                                     <select id="add-student-select-${act.id}" class="flex-grow p-2 border rounded-md text-sm bg-white">
-                                        <option value="">Seleccionar alumno...</option>
+                                        <option value="">Seleccionar estudiante...</option>
                                         ${availableStudentsOptions}
                                     </select>
                                     <button data-action="add-selected-student-to-class" data-activity-id="${act.id}" class="bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 flex-shrink-0"><i data-lucide="plus" class="w-5 h-5"></i></button>
@@ -547,18 +630,18 @@
                                     <button data-action="add-activity" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i>Añadir</button>
                                 </div>
                                 <div class="flex gap-4 mb-4 text-sm">
-                                    <label class="flex items-center gap-2"><input type="radio" name="activityType" value="class" checked class="form-radio"/>Clase con alumnos</label>
+                                    <label class="flex items-center gap-2"><input type="radio" name="activityType" value="class" checked class="form-radio"/>Clase con alumnado</label>
                                     <label class="flex items-center gap-2"><input type="radio" name="activityType" value="general" class="form-radio"/>Actividad general</label>
                                 </div>
                                 <div class="space-y-3 max-h-96 overflow-y-auto pr-2">${activitiesHtml}</div>
                             </div>
                              <!-- Importación Rápida -->
                             <div class="bg-white p-6 rounded-lg shadow-md">
-                                <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clipboard-paste" class="w-5 h-5"></i> Importación Rápida de Alumnos</h3>
+                                <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clipboard-paste" class="w-5 h-5"></i> Importación Rápida de Alumnado</h3>
                                 <div class="space-y-4">
                                     <div><label class="block text-sm font-medium text-gray-700 mb-1">1. Selecciona la clase de destino</label><select id="import-target-class" class="w-full p-2 border rounded-md"><option value="">-- Elige una clase --</option>${state.activities.filter(a => a.type === 'class').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
-                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">2. Pega la lista de alumnos</label><textarea id="student-list-text" placeholder="Juan Pérez\\nMaría García\\n..." class="w-full p-2 border rounded-md h-32"></textarea></div>
-                                    <button data-action="import-students" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2"><i data-lucide="upload" class="w-5 h-5"></i> Importar Alumnos</button>
+                                    <div><label class="block text-sm font-medium text-gray-700 mb-1">2. Pega la lista del alumnado</label><textarea id="student-list-text" placeholder="Juan Pérez\\nMaría García\\n..." class="w-full p-2 border rounded-md h-32"></textarea></div>
+                                    <button data-action="import-students" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2"><i data-lucide="upload" class="w-5 h-5"></i> Importar Alumnado</button>
                                 </div>
                             </div>
                         </div>
@@ -623,7 +706,7 @@
                     <label class="block font-medium text-gray-700">${student.name}</label>
                     <textarea data-action="annotation-change" data-student-id="${student.id}" placeholder="Comportamiento, dudas, trabajo..." class="w-full p-2 border rounded-md mt-1 h-24">${entry.annotations?.[student.id] || ''}</textarea>
                 </div>
-            `).join('') : '<p class="text-gray-500">No hay alumnos asignados a esta clase.</p>';
+            `).join('') : '<p class="text-gray-500">No hay alumnado asignado a esta clase.</p>';
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
@@ -640,7 +723,7 @@
                             <div><label class="block text-lg font-semibold mb-2 text-gray-700">Resumen de lo hecho</label><textarea data-action="completed-change" placeholder="¿Qué se ha hecho finalmente?" class="w-full p-2 border rounded-md h-32">${entry.completed || ''}</textarea></div>
                         </div>
                         <div class="bg-white p-6 rounded-lg shadow-md">
-                            <h3 class="text-lg font-semibold mb-3">Anotaciones de Alumnos</h3>
+                            <h3 class="text-lg font-semibold mb-3">Anotaciones del Alumnado</h3>
                             <div class="space-y-4 max-h-96 overflow-y-auto pr-2">${annotationsHtml}</div>
                         </div>
                     </div>
@@ -968,7 +1051,7 @@
                 const studentListText = studentListTextEl.value;
                 const activity = state.activities.find(a => a.id === targetClassId);
                 if (!activity || studentListText.trim() === '') {
-                    alert("Selecciona una clase y pega una lista de alumnos.");
+                    alert("Selecciona una clase y pega la lista del alumnado.");
                     return;
                 }
 
