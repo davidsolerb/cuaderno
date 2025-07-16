@@ -77,9 +77,6 @@
   "from_date": "From date",
   "until_date": "Until date",
   "add_override": "Add Override",
-  "backup_title": "Backup",
-  "export": "Export",
-  "import": "Import",
   "danger_zone_title": "Danger Zone",
   "delete_all_data": "Delete all data",
   "class": "Class",
@@ -114,7 +111,7 @@
   "manual_getting_started_li2": "<strong>Create Time Slots:</strong> Add the time slots for your day (e.g., \"08:00-09:00\", \"09:00-10:00\"). You can use the automatic generator to create them quickly.",
   "manual_getting_started_li3": "<strong>Create Your Activities/Classes:</strong> Add the subjects or groups you teach. Check the \"Class with students\" option if you want to assign students to it. \"General activities\" are for meetings, duties, etc.",
   "manual_getting_started_li4": "<strong>Set Up Your Base Schedule:</strong> Use the weekly schedule table to assign each activity to its corresponding day and time slot.",
-  "manual_getting_started_li5": "<strong>Add Your Students:</strong> Go to the",
+  "manual_getting_started_li5": "<strong>Add Your Students:</strong> Go to the <strong data-i18n-key=\"manual_classes_strong\">Classes</strong> tab or to the \"Activities Management\" section in Settings to add students to each class. You can do it one by one or use the \"Quick Import\" tool.",
   "manual_classes_strong": "Classes",
   "manual_settings_details_title": "Settings Details",
   "manual_settings_activities_title": "Activities Management",
@@ -150,9 +147,10 @@
   "manual_students_import_p1": "In <strong>Settings</strong>, you can use the import tool to add many students at once. Simply select the destination class and paste the list of names (one per line) into the text area.",
   "manual_data_title": "Data Management",
   "manual_data_p1": "All information is saved locally in your browser. This means the data is private and only accessible from the device and browser where you created it.",
-  "manual_data_backup_title": "Backup",
-  "manual_data_backup_li1": "<strong>Export:</strong> In <strong>Settings</strong>, press the \"Export\" button. A <code>.json</code> file with all your data will be downloaded. Save this file in a safe place.",
-  "manual_data_backup_li2": "<strong>Import:</strong> If you switch computers or want to restore a backup, use the \"Import\" button and select the <code>.json</code> file you saved. <strong>Warning!</strong> This will replace all current data.",
+  "manual_data_backup_title_new": "Save and Open (Backup)",
+  "manual_data_backup_p1": "The buttons to manage your data are now located in the main <strong>Schedule</strong> view, in the upper right corner.",
+  "manual_data_backup_li1_new": "<strong>Save:</strong> Press this button to download a <code>.json</code> file with all your data (schedule, classes, students, notes, etc.). Save this file in a safe place as a backup.",
+  "manual_data_backup_li2_new": "<strong>Open:</strong> If you switch computers or want to restore a backup, use this button and select the <code>.json</code> file you saved. <strong>Warning!</strong> This will replace all current data in the application.",
   "manual_data_delete_title": "Delete all data",
-  "manual_data_delete_p1": "In the \"Danger Zone\" in settings, you can permanently delete all application data. This action cannot be undone, so use it with caution."
+  "manual_data_delete_p1_new": "In the \"Danger Zone\" on the <strong>Settings</strong> page, you can permanently delete all application data. This action cannot be undone, so use it with caution."
 }
