@@ -525,8 +525,8 @@
                     const enrolledStudents = state.students.filter(s => act.studentIds?.includes(s.id));
                     const enrolledStudentsHtml = enrolledStudents.map(student => `
                         <div class="flex items-center justify-between bg-gray-100 p-2 rounded-md text-sm">
-                            <span>${student.name}</span>
-                            <button data-action="remove-student-from-class" data-activity-id="${act.id}" data-student-id="${student.id}" class="text-red-500 hover:text-red-700"><i data-lucide="x" class="w-4 h-4"></i></button>
+                            <button data-action="select-student" data-student-id="${student.id}" class="text-left font-medium text-blue-600 hover:underline flex-grow">${student.name}</button>
+                            <button data-action="remove-student-from-class" data-activity-id="${act.id}" data-student-id="${student.id}" class="text-red-500 hover:text-red-700 ml-2 flex-shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
                         </div>
                     `).join('');
 
@@ -703,7 +703,7 @@
 
             const annotationsHtml = studentsInClass.length > 0 ? studentsInClass.map(student => `
                 <div key="${student.id}">
-                    <label class="block font-medium text-gray-700">${student.name}</label>
+                    <button data-action="select-student" data-student-id="${student.id}" class="text-left font-medium text-blue-600 hover:underline w-full">${student.name}</button>
                     <textarea data-action="annotation-change" data-student-id="${student.id}" placeholder="Comportamiento, dudas, trabajo..." class="w-full p-2 border rounded-md mt-1 h-24">${entry.annotations?.[student.id] || ''}</textarea>
                 </div>
             `).join('') : '<p class="text-gray-500">No hay alumnado asignado a esta clase.</p>';
