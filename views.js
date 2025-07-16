@@ -81,7 +81,18 @@ export function renderScheduleView() {
         <div class="p-6 bg-gray-50 min-h-full">
             <div class="flex justify-between items-center mb-6 no-print">
                  <h2 class="text-2xl font-bold text-gray-800">${t('schedule_view_title')}</h2>
-                 <div class="flex items-center gap-4">
+                 <div class="flex items-center gap-2">
+                    <!-- BOTONES MOVIDOS Y REDISEÑADOS -->
+                    <button data-action="export-data" class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center gap-2">
+                        <i data-lucide="save" class="w-5 h-5"></i> <span data-i18n-key="save_file">Guardar</span>
+                    </button>
+                    <label class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center gap-2 cursor-pointer">
+                        <i data-lucide="folder-open" class="w-5 h-5"></i> <span data-i18n-key="open_file">Abrir</span>
+                        <input type="file" id="import-file-input" accept=".json" class="hidden"/>
+                    </label>
+                    
+                    <div class="w-px h-6 bg-gray-300 mx-2"></div> <!-- Separador visual -->
+
                     <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-left"></i></button>
                     <span class="font-semibold text-lg">${getWeekDateRange(state.currentDate)}</span>
                     <button data-action="next-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-right"></i></button>
@@ -443,13 +454,7 @@ export function renderSettingsView() {
                         <div class="mt-6 space-y-2">${scheduleOverridesHtml}</div>
                     </div>
                      <!-- Copia de Seguridad y Zona de Peligro -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3">${t('backup_title')}</h3>
-                        <div class="flex gap-4">
-                            <button data-action="export-data" class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2"><i data-lucide="download" class="w-5 h-5"></i> ${t('export')}</button>
-                            <label class="bg-gray-700 text-white px-4 py-2 rounded-md hover:bg-gray-800 flex items-center gap-2 cursor-pointer"><i data-lucide="upload" class="w-5 h-5"></i> ${t('import')}<input type="file" id="import-file-input" accept=".json" class="hidden"/></label>
-                        </div>
-                    </div>
+                    <!-- SECCIÓN ELIMINADA DE AQUÍ -->
                     <div class="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
                         <h3 class="text-lg font-semibold text-red-800 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> ${t('danger_zone_title')}</h3>
                         <button data-action="delete-all-data" class="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center gap-2"><i data-lucide="trash-2" class="w-5 h-5"></i> ${t('delete_all_data')}</button>
