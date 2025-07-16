@@ -334,6 +334,38 @@
                     </li>
                 `).join('')
                 : '<p class="text-gray-500">Este alumno no está en ninguna clase.</p>';
+            
+            const studentAnnotations = Object.entries(state.classEntries)
+                .map(([entryId, entryData]) => {
+                    const annotation = entryData.annotations?.[student.id];
+                    if (annotation && annotation.trim() !== '') {
+                        const [activityId, date] = entryId.split('_');
+                        const activity = state.activities.find(a => a.id === activityId);
+                        return {
+                            entryId,
+                            date,
+                            activityName: activity ? activity.name : 'Clase eliminada',
+                            activityColor: activity ? activity.color : '#cccccc',
+                            annotation
+                        };
+                    }
+                    return null;
+                })
+                .filter(Boolean)
+                .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            const annotationsHistoryHtml = studentAnnotations.length > 0
+                ? studentAnnotations.map(item => `
+                    <div class="p-3 bg-gray-50 rounded-lg">
+                        <div class="flex items-center gap-2 mb-2 text-sm font-medium">
+                            <span class="w-3 h-3 rounded-full" style="background-color: ${item.activityColor};"></span>
+                            <span>${item.activityName}</span>
+                            <span class="text-gray-500 font-normal">- ${new Date(item.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</span>
+                        </div>
+                        <textarea data-action="edit-session-annotation" data-entry-id="${item.entryId}" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-24">${item.annotation}</textarea>
+                    </div>
+                `).join('')
+                : '<p class="text-gray-500">No hay anotaciones específicas de sesión para este alumno.</p>';
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
@@ -357,9 +389,13 @@
                                 <label for="edit-student-notes" class="block text-sm font-medium text-gray-700">Anotaciones Generales</label>
                                 <textarea id="edit-student-notes" placeholder="Anotaciones sobre el alumno que no son específicas de una sesión..." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32">${student.generalNotes || ''}</textarea>
                             </div>
-                            <div class="flex justify-end">
+                            <div class="border-t pt-6">
+                                <h3 class="text-lg font-medium text-gray-900 mb-3">Historial de Anotaciones por Sesión</h3>
+                                <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">${annotationsHistoryHtml}</div>
+                            </div>
+                            <div class="flex justify-end border-t pt-6 mt-6">
                                 <button data-action="update-student" data-student-id="${student.id}" class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 flex items-center gap-2">
-                                    <i data-lucide="save"></i> Guardar Cambios
+                                    <i data-lucide="save"></i> Guardar Todos los Cambios
                                 </button>
                             </div>
                         </div>
@@ -621,6 +657,7 @@
                 case 'completed-change':
                 case 'annotation-change':
                 case 'change-activity-color':
+                case 'edit-session-annotation':
                     if (actionHandlers[action]) actionHandlers[action](id, element);
                     break;
                  // Live input changes for student edit view
@@ -687,14 +724,28 @@
                 const studentId = element.dataset.studentId;
                 const student = state.students.find(s => s.id === studentId);
                 if (student) {
+                    // Update general info
                     const newName = document.getElementById('edit-student-name').value.trim();
                     const newNotes = document.getElementById('edit-student-notes').value.trim();
-                    if (newName) {
-                        student.name = newName;
-                        student.generalNotes = newNotes;
-                        saveState();
-                        actionHandlers['back-to-classes']();
+                    if (!newName) {
+                        alert("El nombre del alumno no puede estar vacío.");
+                        return;
                     }
+                    student.name = newName;
+                    student.generalNotes = newNotes;
+
+                    // Update all session annotations for this student
+                    const sessionAnnotationElements = document.querySelectorAll('[data-action="edit-session-annotation"]');
+                    sessionAnnotationElements.forEach(textarea => {
+                        const entryId = textarea.dataset.entryId;
+                        if (state.classEntries[entryId] && state.classEntries[entryId].annotations) {
+                            state.classEntries[entryId].annotations[studentId] = textarea.value;
+                        }
+                    });
+                    
+                    saveState();
+                    alert("Ficha del alumno actualizada.");
+                    actionHandlers['back-to-classes'](); // This will trigger a re-render
                 }
             },
             // --- Activity Actions ---
