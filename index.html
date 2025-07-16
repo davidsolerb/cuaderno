@@ -218,6 +218,7 @@
             students: [],
             timeSlots: [],
             schedule: {},
+            scheduleOverrides: [],
             classEntries: {},
             currentDate: new Date(), // Fecha de referencia para la semana
             courseStartDate: '',
@@ -253,6 +254,7 @@
                 students: state.students,
                 timeSlots: state.timeSlots,
                 schedule: state.schedule,
+                scheduleOverrides: state.scheduleOverrides,
                 classEntries: state.classEntries,
                 courseStartDate: state.courseStartDate,
                 courseEndDate: state.courseEndDate,
@@ -281,6 +283,7 @@
                 state.students = parsedData.students || [];
                 state.timeSlots = parsedData.timeSlots || [];
                 state.schedule = parsedData.schedule || {};
+                state.scheduleOverrides = parsedData.scheduleOverrides || [];
                 state.classEntries = parsedData.classEntries || {};
                 state.courseStartDate = parsedData.courseStartDate || '';
                 state.courseEndDate = parsedData.courseEndDate || '';
@@ -371,7 +374,23 @@
                     const formattedCellDate = formatDate(cellDate);
                     const isToday = isSameDate(cellDate, today);
 
-                    const activityId = state.schedule[`${dayName}-${time.label}`];
+                    // Start with base schedule
+                    let activityId = state.schedule[`${dayName}-${time.label}`];
+
+                    // Check for overrides
+                    const applicableOverride = state.scheduleOverrides.find(ov => {
+                        if (ov.day === dayName && ov.time === time.label) {
+                            const overrideStart = new Date(ov.startDate + 'T00:00:00');
+                            const overrideEnd = new Date(ov.endDate + 'T23:59:59');
+                            return cellDate >= overrideStart && cellDate <= overrideEnd;
+                        }
+                        return false;
+                    });
+
+                    if (applicableOverride) {
+                        activityId = applicableOverride.activityId;
+                    }
+                    
                     const activityInfo = activityId ? getActivityById(activityId) : null;
                     let cellContent = `<div class="p-2 h-full min-h-[40px]"></div>`;
                     
@@ -664,7 +683,19 @@
                 `).join('');
                 return `<tr><td class="p-2 border font-mono bg-gray-50">${time.label}</td>${cells}</tr>`;
             }).join('');
-
+            
+            const scheduleOverridesHtml = state.scheduleOverrides.map(ov => {
+                const activity = state.activities.find(a => a.id === ov.activityId);
+                return `
+                    <div class="text-sm p-2 bg-gray-100 rounded-md flex justify-between items-center">
+                        <div>
+                            <span class="font-semibold">${ov.day} ${ov.time}</span> <i data-lucide="arrow-right" class="inline-block w-4 h-4"></i> <span class="font-semibold">${activity ? activity.name : 'Clase eliminada'}</span>
+                            <div class="text-xs text-gray-600">${ov.startDate} a ${ov.endDate}</div>
+                        </div>
+                        <button data-action="delete-schedule-override" data-id="${ov.id}" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+                    </div>
+                `
+            }).join('');
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full space-y-8">
@@ -709,18 +740,6 @@
                             </div>
                         </div>
                         <div class="space-y-8">
-                            <!-- Generador Automático de Horario -->
-                            <div class="bg-white p-6 rounded-lg shadow-md">
-                                <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="wand-2" class="w-5 h-5"></i> Generador Automático de Horario</h3>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div><label class="block text-sm font-medium">Hora inicio</label><input type="time" id="gen-start-time" value="08:00" class="w-full p-2 border rounded-md"></div>
-                                    <div><label class="block text-sm font-medium">Hora fin</label><input type="time" id="gen-end-time" value="17:00" class="w-full p-2 border rounded-md"></div>
-                                    <div><label class="block text-sm font-medium">Duración clase (min)</label><input type="number" id="gen-class-duration" value="55" class="w-full p-2 border rounded-md"></div>
-                                    <div><label class="block text-sm font-medium">Duración descanso (min)</label><input type="number" id="gen-break-duration" value="30" class="w-full p-2 border rounded-md"></div>
-                                    <div class="col-span-2"><label class="block text-sm font-medium">Hora inicio descanso (opcional)</label><input type="time" id="gen-break-start" value="11:00" class="w-full p-2 border rounded-md"></div>
-                                </div>
-                                <button data-action="generate-schedule-slots" class="mt-4 w-full bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center justify-center gap-2">Generar Franjas</button>
-                            </div>
                             <!-- Gestión de Franjas Horarias -->
                             <div class="bg-white p-6 rounded-lg shadow-md">
                                 <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> Franjas Horarias</h3>
@@ -732,13 +751,30 @@
                             </div>
                             <!-- Horario Semanal -->
                             <div class="bg-white p-6 rounded-lg shadow-md">
-                                <h3 class="text-lg font-semibold mb-3">Configurar Horario Semanal</h3>
+                                <h3 class="text-lg font-semibold mb-3">Configurar Horario Semanal (Base)</h3>
                                 <div class="overflow-x-auto">
                                     <table class="w-full border-collapse text-sm">
                                         <thead><tr class="bg-gray-100"><th class="p-2 border">Hora</th>${["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"].map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
                                         <tbody>${scheduleTableRows}</tbody>
                                     </table>
                                 </div>
+                            </div>
+                            <!-- Sustituciones de Horario -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3">Sustituciones de Horario</h3>
+                                <div class="space-y-4">
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="block text-sm font-medium">Día</label><select id="override-day" class="w-full p-2 border rounded-md"><option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option></select></div>
+                                        <div><label class="block text-sm font-medium">Franja Horaria</label><select id="override-time" class="w-full p-2 border rounded-md">${state.timeSlots.map(t => `<option>${t.label}</option>`).join('')}</select></div>
+                                    </div>
+                                    <div><label class="block text-sm font-medium">Sustituir con</label><select id="override-activity" class="w-full p-2 border rounded-md">${state.activities.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}</select></div>
+                                    <div class="grid grid-cols-2 gap-4">
+                                        <div><label class="block text-sm font-medium">Desde fecha</label><input type="date" id="override-start-date" class="w-full p-2 border rounded-md"></div>
+                                        <div><label class="block text-sm font-medium">Hasta fecha</label><input type="date" id="override-end-date" class="w-full p-2 border rounded-md"></div>
+                                    </div>
+                                    <button data-action="add-schedule-override" class="w-full bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600">Añadir Sustitución</button>
+                                </div>
+                                <div class="mt-6 space-y-2">${scheduleOverridesHtml}</div>
                             </div>
                              <!-- Copia de Seguridad y Zona de Peligro -->
                             <div class="bg-white p-6 rounded-lg shadow-md">
@@ -831,7 +867,7 @@
                 'select-activity', 'back-to-schedule', 'generate-schedule-slots', 'edit-timeslot',
                 'save-timeslot', 'cancel-edit-timeslot', 'edit-activity', 'save-activity',
                 'cancel-edit-activity', 'prev-week', 'next-week', 'today', 'select-student', 'back-to-classes',
-                'add-selected-student-to-class', 'navigate-to-session'
+                'add-selected-student-to-class', 'navigate-to-session', 'add-schedule-override', 'delete-schedule-override'
             ];
             
             if (actionHandlers[action]) {
@@ -1085,6 +1121,28 @@
                 state.schedule[`${day}-${time}`] = element.value;
                 saveState();
             },
+            'add-schedule-override': () => {
+                const day = document.getElementById('override-day').value;
+                const time = document.getElementById('override-time').value;
+                const activityId = document.getElementById('override-activity').value;
+                const startDate = document.getElementById('override-start-date').value;
+                const endDate = document.getElementById('override-end-date').value;
+
+                if (!day || !time || !activityId || !startDate || !endDate) {
+                    alert('Por favor, completa todos los campos de la sustitución.');
+                    return;
+                }
+                
+                state.scheduleOverrides.push({
+                    id: crypto.randomUUID(),
+                    day, time, activityId, startDate, endDate
+                });
+                saveState();
+            },
+            'delete-schedule-override': (id) => {
+                state.scheduleOverrides = state.scheduleOverrides.filter(ov => ov.id !== id);
+                saveState();
+            },
             'print-schedule': () => window.print(),
             'print-student-sheet': () => window.print(),
             'select-activity': (id, element) => {
@@ -1176,6 +1234,7 @@
                     students: state.students,
                     timeSlots: state.timeSlots,
                     schedule: state.schedule,
+                    scheduleOverrides: state.scheduleOverrides,
                     classEntries: state.classEntries,
                     courseStartDate: state.courseStartDate,
                     courseEndDate: state.courseEndDate,
@@ -1200,6 +1259,7 @@
                             state.students = data.students || [];
                             state.timeSlots = data.timeSlots || [];
                             state.schedule = data.schedule || {};
+                            state.scheduleOverrides = data.scheduleOverrides || [];
                             state.classEntries = data.classEntries || {};
                             state.courseStartDate = data.courseStartDate || '';
                             state.courseEndDate = data.courseEndDate || '';
