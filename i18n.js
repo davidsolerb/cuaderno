@@ -59,10 +59,11 @@ async function setLanguage(lang) {
         btn.classList.toggle('text-gray-500', buttonLang !== lang);
     });
     
-    // Traducir los elementos estáticos (como el menú de navegación)
+    // Traducir los elementos estáticos (usando innerHTML para que renderice las etiquetas)
     document.querySelectorAll('[data-i18n-key]').forEach(element => {
         const key = element.dataset.i18nKey;
-        element.textContent = t(key);
+        // *** CAMBIO CLAVE AQUÍ ***
+        element.innerHTML = t(key);
     });
 
     // Llamar a la función render principal para que la vista activa se vuelva a generar con el nuevo idioma.
@@ -103,8 +104,9 @@ export async function initI18n(renderFunc) {
         btn.classList.toggle('text-gray-500', buttonLang !== langToLoad);
     });
 
-    // Traduce los elementos estáticos al iniciar
+    // Traduce los elementos estáticos al iniciar (usando innerHTML)
     document.querySelectorAll('[data-i18n-key]').forEach(element => {
-        element.textContent = t(element.dataset.i18nKey);
+        // *** CAMBIO CLAVE AQUÍ ***
+        element.innerHTML = t(element.dataset.i18nKey);
     });
 }
