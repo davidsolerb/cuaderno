@@ -3,6 +3,7 @@
 import { state, loadState } from './state.js';
 import * as views from './views.js';
 import { actionHandlers } from './actions.js';
+import { initI18n } from './i18n.js'; // Importamos el inicializador de i18n
 
 const mainContent = document.getElementById('main-content');
 const navButtons = document.querySelectorAll('.nav-button');
@@ -11,6 +12,8 @@ function render() {
     mainContent.innerHTML = ''; // Limpiar vista anterior
     let viewContent = '';
 
+    // Las funciones de las vistas (en views.js) ahora usarán el traductor,
+    // por lo que el contenido se generará en el idioma correcto.
     switch (state.activeView) {
         case 'schedule': viewContent = views.renderScheduleView(); break;
         case 'classes': viewContent = views.renderClassesView(); break;
@@ -20,6 +23,7 @@ function render() {
         default: viewContent = views.renderScheduleView();
     }
     mainContent.innerHTML = `<div class="animate-fade-in">${viewContent}</div>`;
+    
     lucide.createIcons();
     attachEventListeners();
 }
@@ -60,7 +64,6 @@ function attachEventListeners() {
         const action = el.dataset.action;
         const eventType = ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) ? 'input' : 'click';
         
-        // Prevenir añadir múltiples listeners al mismo elemento
         if (el.dataset.listenerAttached === 'true') return;
 
         el.addEventListener(eventType, (e) => handleAction(action, el, e));
@@ -74,10 +77,14 @@ function attachEventListeners() {
     }
 }
 
-function init() {
+// La función principal ahora es ASÍNCRONA
+async function init() {
+    // AÑADIMOS 'await' para que el programa espere aquí hasta que las traducciones estén listas
+    await initI18n(render); 
+    
     loadState();
     updateNavButtons();
-    render();
+    render(); // El primer render de la aplicación
     
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -89,7 +96,6 @@ function init() {
         });
     });
 
-    // Escuchar evento personalizado para re-renderizar desde otros módulos si es necesario
     document.addEventListener('render', () => render());
 }
 
