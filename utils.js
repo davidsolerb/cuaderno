@@ -3,6 +3,9 @@
 import { state } from './state.js';
 import { t } from './i18n.js'; // Importamos la función de traducción
 
+// Claves internas para los días de la semana. No dependen del idioma.
+export const DAY_KEYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
 export function darkenColor(hex, percent) {
     if (!hex || typeof hex !== 'string') return '#000000';
     let [r, g, b] = hex.match(/\w\w/g).map(x => parseInt(x, 16));
@@ -40,7 +43,6 @@ export function isSameDate(date1, date2) {
 }
 
 function findSession(activityId, fromDate, direction) {
-    const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
     const timeSlots = state.timeSlots;
     const increment = direction === 'next' ? 1 : -1;
     const activity = state.activities.find(a => a.id === activityId);
@@ -50,14 +52,14 @@ function findSession(activityId, fromDate, direction) {
     currentDate.setDate(currentDate.getDate() + increment);
 
     for (let i = 0; i < 365; i++) {
-        const dayOfWeek = (currentDate.getDay() + 6) % 7;
+        const dayOfWeek = (currentDate.getDay() + 6) % 7; // Monday = 0
         
-        if (dayOfWeek < 5) {
-            const dayName = days[dayOfWeek];
+        if (dayOfWeek >= 0 && dayOfWeek < 5) { // Solo de Lunes a Viernes
+            const dayKey = DAY_KEYS[dayOfWeek]; // Usar la clave en inglés
             const slotsToCheck = direction === 'next' ? timeSlots : [...timeSlots].reverse();
 
             for (const time of slotsToCheck) {
-                if (state.schedule[`${dayName}-${time.label}`] === activityId) {
+                if (state.schedule[`${dayKey}-${time.label}`] === activityId) {
                     const courseStartDate = state.courseStartDate ? new Date(state.courseStartDate + 'T00:00:00') : null;
                     const courseEndDate = state.courseEndDate ? new Date(state.courseEndDate + 'T23:59:59') : null;
                     const activityStartDate = activity.startDate ? new Date(activity.startDate + 'T00:00:00') : courseStartDate;
@@ -70,7 +72,7 @@ function findSession(activityId, fromDate, direction) {
                     if (activityEndDate && currentDate > activityEndDate) inDateRange = false;
 
                     if(inDateRange) {
-                        return { day: dayName, time: time.label, date: formatDate(currentDate) };
+                        return { day: dayKey, time: time.label, date: formatDate(currentDate) };
                     }
                 }
             }
