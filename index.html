@@ -301,6 +301,12 @@
             return `${startOfWeek.toLocaleDateString('es-ES', options)} - ${endOfWeek.toLocaleDateString('es-ES', {...options, year: 'numeric'})}`;
         }
 
+        function isSameDate(date1, date2) {
+            return date1.getFullYear() === date2.getFullYear() &&
+                   date1.getMonth() === date2.getMonth() &&
+                   date1.getDate() === date2.getDate();
+        }
+
 
         // --- LÓGICA DE RENDERIZADO ---
         const mainContent = document.getElementById('main-content');
@@ -339,12 +345,21 @@
             const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
             const getActivityById = (id) => state.activities.find(c => c.id === id);
             const startOfWeek = getWeekStartDate(state.currentDate);
+            const today = new Date();
+            
+            const headerCells = days.map((dayName, dayIndex) => {
+                const cellDate = new Date(startOfWeek);
+                cellDate.setDate(startOfWeek.getDate() + dayIndex);
+                const isToday = isSameDate(cellDate, today);
+                return `<th class="p-2 border ${isToday ? 'bg-blue-100' : ''}">${dayName}</th>`;
+            }).join('');
 
             const tableRows = state.timeSlots.map(time => {
                 const cells = days.map((dayName, dayIndex) => {
                     const cellDate = new Date(startOfWeek);
                     cellDate.setDate(startOfWeek.getDate() + dayIndex);
                     const formattedCellDate = formatDate(cellDate);
+                    const isToday = isSameDate(cellDate, today);
 
                     const activityId = state.schedule[`${dayName}-${time.label}`];
                     const activityInfo = activityId ? getActivityById(activityId) : null;
@@ -361,7 +376,7 @@
                             cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
                         }
                     }
-                    return `<td class="p-1 border">${cellContent}</td>`;
+                    return `<td class="p-1 border ${isToday ? 'bg-blue-50' : ''}">${cellContent}</td>`;
                 }).join('');
                 return `<tr><td class="p-2 border font-mono bg-gray-50 text-sm">${time.label}</td>${cells}</tr>`;
             }).join('');
@@ -384,7 +399,7 @@
                         <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block text-center">Horario Semanal - ${getWeekDateRange(state.currentDate)}</h2>
                         <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
                             <table class="w-full border-collapse text-center">
-                                <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${days.map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
+                                <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${headerCells}</tr></thead>
                                 <tbody>${tableRows.length > 0 ? tableRows : '<tr><td colspan="6" class="p-4 text-gray-500">Añada franjas horarias en Configuración.</td></tr>'}</tbody>
                             </table>
                         </div>
@@ -696,8 +711,8 @@
         }
 
         function renderActivityDetailView() {
-            const { name, day, time, date } = state.selectedActivity;
-            const entryId = `${state.selectedActivity.id}_${date}`;
+            const { name, day, time, date, id: activityId } = state.selectedActivity;
+            const entryId = `${activityId}_${date}`;
             const entry = state.classEntries[entryId] || { planned: '', completed: '', annotations: {} };
             const studentsInClass = state.students.filter(s => state.selectedActivity.studentIds?.includes(s.id));
 
@@ -707,15 +722,27 @@
                     <textarea data-action="annotation-change" data-student-id="${student.id}" placeholder="Comportamiento, dudas, trabajo..." class="w-full p-2 border rounded-md mt-1 h-24">${entry.annotations?.[student.id] || ''}</textarea>
                 </div>
             `).join('') : '<p class="text-gray-500">No hay alumnado asignado a esta clase.</p>';
+            
+            // --- Lógica de Navegación de Sesiones ---
+            const prevSession = findPreviousSession(activityId, new Date(date));
+            const nextSession = findNextSession(activityId, new Date(date));
+
+            const prevButton = prevSession ? `<button data-action="navigate-to-session" data-activity-id="${activityId}" data-day="${prevSession.day}" data-time="${prevSession.time}" data-date="${prevSession.date}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 flex items-center gap-2"><i data-lucide="arrow-left"></i> Sesión anterior</button>` : `<button class="bg-gray-200 text-gray-400 px-4 py-2 rounded-md cursor-not-allowed flex items-center gap-2" disabled><i data-lucide="arrow-left"></i> Sesión anterior</button>`;
+            const nextButton = nextSession ? `<button data-action="navigate-to-session" data-activity-id="${activityId}" data-day="${nextSession.day}" data-time="${nextSession.time}" data-date="${nextSession.date}" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 flex items-center gap-2">Siguiente sesión <i data-lucide="arrow-right"></i></button>` : `<button class="bg-gray-200 text-gray-400 px-4 py-2 rounded-md cursor-not-allowed flex items-center gap-2" disabled>Siguiente sesión <i data-lucide="arrow-right"></i></button>`;
+
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
-                    <div class="flex justify-between items-center mb-6 no-print">
+                    <div class="flex justify-between items-center mb-2 no-print">
                         <div>
                             <h2 class="text-2xl font-bold text-gray-800">${name}</h2>
                             <p class="text-gray-500">${day}, ${new Date(date + 'T00:00:00').toLocaleDateString('es-ES', {day: 'numeric', month: 'long', year: 'numeric'})} (${time})</p>
                         </div>
                         <button data-action="back-to-schedule" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300">Volver al horario</button>
+                    </div>
+                    <div class="flex justify-between items-center mb-6 no-print">
+                        ${prevButton}
+                        ${nextButton}
                     </div>
                     <div class="grid md:grid-cols-2 gap-6">
                         <div class="bg-white p-6 rounded-lg shadow-md space-y-4">
@@ -756,7 +783,7 @@
                 'select-activity', 'back-to-schedule', 'generate-schedule-slots', 'edit-timeslot',
                 'save-timeslot', 'cancel-edit-timeslot', 'edit-activity', 'save-activity',
                 'cancel-edit-activity', 'prev-week', 'next-week', 'today', 'select-student', 'back-to-classes',
-                'add-selected-student-to-class'
+                'add-selected-student-to-class', 'navigate-to-session'
             ];
             
             if (actionHandlers[action]) {
@@ -1015,6 +1042,11 @@
                 state.selectedActivity = null;
                 state.activeView = 'schedule';
             },
+            'navigate-to-session': (id, element) => {
+                const { activityId, day, time, date } = element.dataset;
+                const activityInfo = state.activities.find(a => a.id === activityId);
+                state.selectedActivity = { ...activityInfo, day, time, date };
+            },
             'prev-week': () => {
                 state.currentDate.setDate(state.currentDate.getDate() - 7);
             },
@@ -1121,6 +1153,48 @@
                 });
             },
         };
+
+        // --- SESSION NAVIGATION LOGIC ---
+        function findSession(activityId, fromDate, direction) {
+            const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
+            const timeSlots = state.timeSlots;
+            const increment = direction === 'next' ? 1 : -1;
+
+            let currentDate = new Date(fromDate);
+            
+            // Start from the next/previous day
+            currentDate.setDate(currentDate.getDate() + increment);
+
+            // Search for a maximum of 1 year to avoid infinite loops
+            for (let i = 0; i < 365; i++) {
+                const dayOfWeek = (currentDate.getDay() + 6) % 7; // Monday = 0
+                
+                if (dayOfWeek < 5) { // Only check Monday to Friday
+                    const dayName = days[dayOfWeek];
+                    const slotsToCheck = direction === 'next' ? timeSlots : [...timeSlots].reverse();
+
+                    for (const time of slotsToCheck) {
+                        if (state.schedule[`${dayName}-${time.label}`] === activityId) {
+                            return {
+                                day: dayName,
+                                time: time.label,
+                                date: formatDate(currentDate)
+                            };
+                        }
+                    }
+                }
+                currentDate.setDate(currentDate.getDate() + increment);
+            }
+            return null; // Not found
+        }
+
+        function findNextSession(activityId, fromDate) {
+            return findSession(activityId, fromDate, 'next');
+        }
+
+        function findPreviousSession(activityId, fromDate) {
+            return findSession(activityId, fromDate, 'previous');
+        }
 
         // --- MODAL HELPER ---
         const modalContainer = document.getElementById('modal-container');
