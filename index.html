@@ -351,7 +351,11 @@
                 const cellDate = new Date(startOfWeek);
                 cellDate.setDate(startOfWeek.getDate() + dayIndex);
                 const isToday = isSameDate(cellDate, today);
-                return `<th class="p-2 border ${isToday ? 'bg-blue-100' : ''}">${dayName}</th>`;
+                const formattedDate = cellDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                return `<th class="p-2 border ${isToday ? 'bg-blue-100' : ''}">
+                            <div>${dayName}</div>
+                            <div class="text-xs font-normal text-gray-500">${formattedDate}</div>
+                        </th>`;
             }).join('');
 
             const tableRows = state.timeSlots.map(time => {
