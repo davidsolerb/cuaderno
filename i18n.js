@@ -45,9 +45,10 @@ async function setLanguage(lang) {
     
     await loadTranslations(lang);
 
-    // Guardar la preferencia y actualizar la etiqueta lang del HTML
+    // Guardar la preferencia y actualizar la etiqueta lang y el título del documento
     document.documentElement.lang = lang;
     localStorage.setItem('preferredLanguage', lang);
+    document.title = t('app_title');
 
     // Actualizar el estilo de los botones del selector de idioma
     document.querySelectorAll('.lang-switcher').forEach(btn => {
@@ -89,129 +90,21 @@ export async function initI18n(renderFunc) {
     });
 
     // Cargar el idioma inicial y actualizar la UI estática.
-    // No llamamos a setLanguage() completo para evitar un re-renderizado doble al inicio.
     await loadTranslations(langToLoad);
     document.documentElement.lang = langToLoad;
+    document.title = t('app_title'); // Traduce el título al iniciar
+
+    // Actualiza el estilo de los botones del selector de idioma al cargar
     document.querySelectorAll('.lang-switcher').forEach(btn => {
         const buttonLang = btn.dataset.lang;
         btn.classList.toggle('border-blue-600', buttonLang === langToLoad);
         btn.classList.toggle('text-blue-600', buttonLang === langToLoad);
+        btn.classList.toggle('border-transparent', buttonLang !== langToLoad);
+        btn.classList.toggle('text-gray-500', buttonLang !== langToLoad);
     });
+
+    // Traduce los elementos estáticos al iniciar
     document.querySelectorAll('[data-i18n-key]').forEach(element => {
         element.textContent = t(element.dataset.i18nKey);
     });
 }
-```
-
-**2. Conexión con `main.js`**
-
-Ahora, modificamos `main.js` para que use este nuevo módulo. Los cambios principales son:
-* Importar `initI18n`.
-* Llamar a `initI18n()` al principio, pasándole la función `render` para que el motor de traducción pueda redibujar la pantalla cuando sea necesario.
-
-
-```javascript
-// main.js: El punto de entrada principal que une todo.
-
-import { state, loadState } from './state.js';
-import * as views from './views.js';
-import { actionHandlers } from './actions.js';
-import { initI18n } from './i18n.js'; // Importamos el inicializador de i18n
-
-const mainContent = document.getElementById('main-content');
-const navButtons = document.querySelectorAll('.nav-button');
-
-function render() {
-    mainContent.innerHTML = ''; // Limpiar vista anterior
-    let viewContent = '';
-
-    // Las funciones de las vistas (en views.js) ahora usarán el traductor,
-    // por lo que el contenido se generará en el idioma correcto.
-    switch (state.activeView) {
-        case 'schedule': viewContent = views.renderScheduleView(); break;
-        case 'classes': viewContent = views.renderClassesView(); break;
-        case 'settings': viewContent = views.renderSettingsView(); break;
-        case 'activityDetail': viewContent = views.renderActivityDetailView(); break;
-        case 'studentDetail': viewContent = views.renderStudentDetailView(); break;
-        default: viewContent = views.renderScheduleView();
-    }
-    mainContent.innerHTML = `<div class="animate-fade-in">${viewContent}</div>`;
-    
-    lucide.createIcons();
-    attachEventListeners();
-}
-
-function updateNavButtons() {
-    navButtons.forEach(btn => {
-        const view = btn.dataset.view;
-        btn.classList.toggle('bg-blue-600', view === state.activeView);
-        btn.classList.toggle('text-white', view === state.activeView);
-        btn.classList.toggle('text-gray-600', view !== state.activeView);
-        btn.classList.toggle('hover:bg-gray-200', view !== state.activeView);
-    });
-}
-
-function handleAction(action, element, event) {
-    const id = element.dataset.id;
-    const reRenderActions = [
-        'add-activity', 'delete-activity', 'add-student-to-class', 'remove-student-from-class',
-        'add-timeslot', 'delete-timeslot', 'reorder-timeslot', 'import-students',
-        'select-activity', 'back-to-schedule', 'generate-schedule-slots', 'edit-timeslot',
-        'save-timeslot', 'cancel-edit-timeslot', 'edit-activity', 'save-activity',
-        'cancel-edit-activity', 'prev-week', 'next-week', 'today', 'select-student', 'back-to-classes',
-        'add-selected-student-to-class', 'navigate-to-session', 'add-schedule-override', 'delete-schedule-override'
-    ];
-    
-    if (actionHandlers[action]) {
-        actionHandlers[action](id, element, event);
-    }
-
-    if (reRenderActions.includes(action)) {
-        render();
-    }
-}
-
-function attachEventListeners() {
-    const elements = document.querySelectorAll('[data-action]');
-    elements.forEach(el => {
-        const action = el.dataset.action;
-        const eventType = ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) ? 'input' : 'click';
-        
-        if (el.dataset.listenerAttached === 'true') return;
-
-        el.addEventListener(eventType, (e) => handleAction(action, el, e));
-        el.dataset.listenerAttached = 'true';
-    });
-    
-    const importInput = document.getElementById('import-file-input');
-    if (importInput && importInput.dataset.listenerAttached !== 'true') {
-        importInput.addEventListener('change', handleAction.bind(null, 'import-data', importInput));
-        importInput.dataset.listenerAttached = 'true';
-    }
-}
-
-
-async function init() {
-    // Inicializamos el sistema de i18n y le pasamos la función render.
-    // Esto debe hacerse antes de cargar el estado y renderizar por primera vez.
-    await initI18n(render); 
-    
-    loadState();
-    updateNavButtons();
-    render(); // El primer render de la aplicación
-    
-    navButtons.forEach(btn => {
-        btn.addEventListener('click', () => {
-            state.activeView = btn.dataset.view;
-            state.selectedActivity = null;
-            state.selectedStudentId = null;
-            updateNavButtons();
-            render();
-        });
-    });
-
-    document.addEventListener('render', () => render());
-}
-
-// Iniciar la aplicación
-init();
