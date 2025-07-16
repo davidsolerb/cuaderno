@@ -220,6 +220,8 @@
             schedule: {},
             classEntries: {},
             currentDate: new Date(), // Fecha de referencia para la semana
+            courseStartDate: '',
+            courseEndDate: '',
             selectedActivity: null,
             selectedStudentId: null,
             editingTimeSlotId: null,
@@ -252,6 +254,8 @@
                 timeSlots: state.timeSlots,
                 schedule: state.schedule,
                 classEntries: state.classEntries,
+                courseStartDate: state.courseStartDate,
+                courseEndDate: state.courseEndDate,
             };
             localStorage.setItem('teacherDashboardData', JSON.stringify(dataToSave));
             
@@ -278,6 +282,8 @@
                 state.timeSlots = parsedData.timeSlots || [];
                 state.schedule = parsedData.schedule || {};
                 state.classEntries = parsedData.classEntries || {};
+                state.courseStartDate = parsedData.courseStartDate || '';
+                state.courseEndDate = parsedData.courseEndDate || '';
             }
         }
         
@@ -368,16 +374,30 @@
                     const activityId = state.schedule[`${dayName}-${time.label}`];
                     const activityInfo = activityId ? getActivityById(activityId) : null;
                     let cellContent = `<div class="p-2 h-full min-h-[40px]"></div>`;
+                    
                     if (activityInfo) {
-                        const entryId = `${activityInfo.id}_${formattedCellDate}`;
-                        const hasPlan = state.classEntries[entryId] && state.classEntries[entryId].planned;
-                        const planIndicator = hasPlan ? `<span class="absolute top-1 right-1 text-xs">📝</span>` : '';
+                        const courseStartDate = state.courseStartDate ? new Date(state.courseStartDate + 'T00:00:00') : null;
+                        const courseEndDate = state.courseEndDate ? new Date(state.courseEndDate + 'T23:59:59') : null;
+                        const activityStartDate = activityInfo.startDate ? new Date(activityInfo.startDate + 'T00:00:00') : courseStartDate;
+                        const activityEndDate = activityInfo.endDate ? new Date(activityInfo.endDate + 'T23:59:59') : courseEndDate;
 
-                        const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
-                        if (activityInfo.type === 'class') {
-                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${dayName}' data-time='${time.label}' data-date='${formattedCellDate}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}${planIndicator}</button>`;
-                        } else {
-                            cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
+                        let inDateRange = true;
+                        if (courseStartDate && cellDate < courseStartDate) inDateRange = false;
+                        if (courseEndDate && cellDate > courseEndDate) inDateRange = false;
+                        if (activityStartDate && cellDate < activityStartDate) inDateRange = false;
+                        if (activityEndDate && cellDate > activityEndDate) inDateRange = false;
+
+                        if (inDateRange) {
+                            const entryId = `${activityInfo.id}_${formattedCellDate}`;
+                            const hasPlan = state.classEntries[entryId] && state.classEntries[entryId].planned;
+                            const planIndicator = hasPlan ? `<span class="absolute top-1 right-1 text-xs">📝</span>` : '';
+
+                            const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
+                            if (activityInfo.type === 'class') {
+                                cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${dayName}' data-time='${time.label}' data-date='${formattedCellDate}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}${planIndicator}</button>`;
+                            } else {
+                                cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
+                            }
                         }
                     }
                     return `<td class="p-1 border ${isToday ? 'bg-blue-50' : ''}">${cellContent}</td>`;
@@ -579,10 +599,20 @@
                     <div class="p-4 border rounded-md bg-white border-blue-500">
                         <div class="flex justify-between items-center">
                             <input type="color" data-action="change-activity-color" data-id="${act.id}" value="${act.color}" class="p-0 border-none rounded-full cursor-pointer w-7 h-7">
-                            <input type="text" data-action="edit-activity-input" value="${act.name}" class="flex-grow p-1 mx-2 border-0 rounded-md focus:ring-0 font-semibold">
+                            <input type="text" id="edit-activity-name-${act.id}" value="${act.name}" class="flex-grow p-1 mx-2 border-0 rounded-md focus:ring-0 font-semibold">
                             <div class="flex items-center gap-2">
                                 <button data-action="save-activity" data-id="${act.id}" class="text-green-600 hover:text-green-800"><i data-lucide="check" class="w-5 h-5"></i></button>
                                 <button data-action="cancel-edit-activity" class="text-red-600 hover:text-red-800"><i data-lucide="x" class="w-5 h-5"></i></button>
+                            </div>
+                        </div>
+                        <div class="mt-4 grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                                <label class="block font-medium text-gray-600">Inicio Clase</label>
+                                <input type="date" id="edit-activity-start-${act.id}" value="${act.startDate || ''}" class="w-full p-1 border rounded-md">
+                            </div>
+                            <div>
+                                <label class="block font-medium text-gray-600">Fin Clase</label>
+                                <input type="date" id="edit-activity-end-${act.id}" value="${act.endDate || ''}" class="w-full p-1 border rounded-md">
                             </div>
                         </div>
                         ${studentsInClassHtml}
@@ -641,6 +671,20 @@
                     <h2 class="text-2xl font-bold text-gray-800">Configuración General</h2>
                     <div class="grid lg:grid-cols-2 gap-8 items-start">
                         <div class="space-y-8">
+                             <!-- Fechas del Curso -->
+                            <div class="bg-white p-6 rounded-lg shadow-md">
+                                <h3 class="text-lg font-semibold mb-3">Fechas del Curso Académico</h3>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Fecha de Inicio</label>
+                                        <input type="date" data-action="update-course-date" data-type="start" value="${state.courseStartDate}" class="mt-1 w-full p-2 border rounded-md">
+                                    </div>
+                                    <div>
+                                        <label class="block text-sm font-medium text-gray-700">Fecha de Fin</label>
+                                        <input type="date" data-action="update-course-date" data-type="end" value="${state.courseEndDate}" class="mt-1 w-full p-2 border rounded-md">
+                                    </div>
+                                </div>
+                            </div>
                             <!-- Gestión de Actividades -->
                             <div class="bg-white p-6 rounded-lg shadow-md">
                                 <h3 class="text-lg font-semibold mb-3">Gestión de Actividades</h3>
@@ -883,7 +927,9 @@
                         name, 
                         type, 
                         studentIds: [],
-                        color: getRandomPastelColor()
+                        color: getRandomPastelColor(),
+                        startDate: state.courseStartDate,
+                        endDate: state.courseEndDate
                     });
                     nameInput.value = '';
                     saveState();
@@ -905,12 +951,17 @@
             'save-activity': (id) => {
                 const activity = state.activities.find(a => a.id === id);
                 if (activity) {
-                    const input = document.querySelector(`input[data-action="edit-activity-input"]`);
-                    const newName = input.value.trim();
+                    const nameInput = document.getElementById(`edit-activity-name-${id}`);
+                    const startDateInput = document.getElementById(`edit-activity-start-${id}`);
+                    const endDateInput = document.getElementById(`edit-activity-end-${id}`);
+                    
+                    const newName = nameInput.value.trim();
                     if (newName) {
                         activity.name = newName;
-                        saveState();
                     }
+                    activity.startDate = startDateInput.value;
+                    activity.endDate = endDateInput.value;
+                    saveState();
                 }
                 state.editingActivityId = null;
             },
@@ -1081,6 +1132,15 @@
                 saveState();
             },
             // --- Data Management Actions ---
+            'update-course-date': (id, element) => {
+                const type = element.dataset.type;
+                if (type === 'start') {
+                    state.courseStartDate = element.value;
+                } else {
+                    state.courseEndDate = element.value;
+                }
+                saveState();
+            },
             'import-students': () => {
                 const targetClassId = document.getElementById('import-target-class').value;
                 const studentListTextEl = document.getElementById('student-list-text');
@@ -1117,6 +1177,8 @@
                     timeSlots: state.timeSlots,
                     schedule: state.schedule,
                     classEntries: state.classEntries,
+                    courseStartDate: state.courseStartDate,
+                    courseEndDate: state.courseEndDate,
                 }, null, 2);
                 const blob = new Blob([dataStr], { type: 'application/json' });
                 const url = URL.createObjectURL(blob);
@@ -1139,6 +1201,8 @@
                             state.timeSlots = data.timeSlots || [];
                             state.schedule = data.schedule || {};
                             state.classEntries = data.classEntries || {};
+                            state.courseStartDate = data.courseStartDate || '';
+                            state.courseEndDate = data.courseEndDate || '';
                             saveState();
                             alert('Datos importados con éxito.');
                             window.location.reload();
@@ -1163,10 +1227,12 @@
             const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
             const timeSlots = state.timeSlots;
             const increment = direction === 'next' ? 1 : -1;
+            const activity = state.activities.find(a => a.id === activityId);
+            if (!activity) return null;
 
             let currentDate = new Date(fromDate);
             
-            // Start from the next/previous day
+            // Start from the next/previous day to avoid finding the same day
             currentDate.setDate(currentDate.getDate() + increment);
 
             // Search for a maximum of 1 year to avoid infinite loops
@@ -1179,11 +1245,25 @@
 
                     for (const time of slotsToCheck) {
                         if (state.schedule[`${dayName}-${time.label}`] === activityId) {
-                            return {
-                                day: dayName,
-                                time: time.label,
-                                date: formatDate(currentDate)
-                            };
+                            // Check if this found session is within the valid date ranges
+                            const courseStartDate = state.courseStartDate ? new Date(state.courseStartDate + 'T00:00:00') : null;
+                            const courseEndDate = state.courseEndDate ? new Date(state.courseEndDate + 'T23:59:59') : null;
+                            const activityStartDate = activity.startDate ? new Date(activity.startDate + 'T00:00:00') : courseStartDate;
+                            const activityEndDate = activity.endDate ? new Date(activity.endDate + 'T23:59:59') : courseEndDate;
+
+                            let inDateRange = true;
+                            if (courseStartDate && currentDate < courseStartDate) inDateRange = false;
+                            if (courseEndDate && currentDate > courseEndDate) inDateRange = false;
+                            if (activityStartDate && currentDate < activityStartDate) inDateRange = false;
+                            if (activityEndDate && currentDate > activityEndDate) inDateRange = false;
+
+                            if(inDateRange) {
+                                return {
+                                    day: dayName,
+                                    time: time.label,
+                                    date: formatDate(currentDate)
+                                };
+                            }
                         }
                     }
                 }
