@@ -23,6 +23,9 @@
         
         /* Estilos de impresión */
         @media print {
+            body {
+                font-size: 10px; /* Reduce el tamaño de la fuente base para imprimir */
+            }
             body * {
                 visibility: hidden;
             }
@@ -34,6 +37,26 @@
                 left: 0;
                 top: 0;
                 width: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            #printable-schedule table {
+                width: 100%;
+                table-layout: fixed; /* Clave para controlar el ancho de las columnas */
+                font-size: 9px; /* Fuente más pequeña dentro de la tabla */
+                border-spacing: 0;
+            }
+            #printable-schedule th, #printable-schedule td {
+                padding: 4px 2px; /* Reduce el padding */
+                word-wrap: break-word; /* Rompe palabras largas si es necesario */
+            }
+             #printable-schedule button, #printable-schedule div[style*="background-color"] {
+                font-size: 8px !important; /* Fuente aún más pequeña en los botones */
+                padding: 2px !important;
+                min-height: 0 !important;
+                white-space: normal !important;
+                line-height: 1.2 !important;
+                height: 100% !important;
             }
             .no-print {
                 display: none !important;
@@ -207,7 +230,7 @@
                          </button>
                     </div>
                     <div id="printable-schedule">
-                        <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block">Horario Semanal</h2>
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block text-center">Horario Semanal</h2>
                         <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
                             <table class="w-full border-collapse text-center">
                                 <thead><tr class="bg-gray-100"><th class="p-2 border w-24">Hora</th>${days.map(day => `<th class="p-2 border">${day}</th>`).join('')}</tr></thead>
