@@ -77,9 +77,6 @@
   "from_date": "Desde fecha",
   "until_date": "Hasta fecha",
   "add_override": "Añadir Sustitución",
-  "backup_title": "Copia de Seguridad",
-  "export": "Exportar",
-  "import": "Importar",
   "danger_zone_title": "Zona de Peligro",
   "delete_all_data": "Borrar todos los datos",
   "class": "Clase",
@@ -114,7 +111,7 @@
   "manual_getting_started_li2": "<strong>Crea las Franjas Horarias:</strong> Añade las franjas horarias de tu jornada (Ej: \"08:00-09:00\", \"09:00-10:00\"). Puedes usar el generador automático para crearlas rápidamente.",
   "manual_getting_started_li3": "<strong>Crea tus Actividades/Clases:</strong> Añade las asignaturas o grupos que impartes. Marca la opción \"Clase con alumnado\" si quieres asignarle estudiantes. Las \"Actividades generales\" son para reuniones, guardias, etc.",
   "manual_getting_started_li4": "<strong>Configura tu Horario Base:</strong> Usa la tabla del horario semanal para asignar cada actividad a su día y franja horaria correspondiente.",
-  "manual_getting_started_li5": "<strong>Añade tu Alumnado:</strong> Ve a la pestaña",
+  "manual_getting_started_li5": "<strong>Añade tu Alumnado:</strong> Ve a la pestaña <strong data-i18n-key=\"manual_classes_strong\">Clases</strong> o a la sección de \"Gestión de Actividades\" en Configuración para añadir estudiantes a cada clase. Puedes hacerlo uno a uno o usar la herramienta de \"Importación Rápida\".",
   "manual_classes_strong": "Clases",
   "manual_settings_details_title": "Detalles de la Configuración",
   "manual_settings_activities_title": "Gestión de Actividades",
@@ -150,9 +147,10 @@
   "manual_students_import_p1": "En <strong>Configuración</strong>, puedes usar la herramienta de importación para añadir muchos estudiantes a la vez. Simplemente selecciona la clase de destino y pega la lista de nombres (uno por línea) en el área de texto.",
   "manual_data_title": "Gestión de Datos",
   "manual_data_p1": "Toda la información se guarda localmente en tu navegador. Esto significa que los datos son privados y solo accesibles desde el dispositivo y navegador donde los creaste.",
-  "manual_data_backup_title": "Copia de Seguridad (Backup)",
-  "manual_data_backup_li1": "<strong>Exportar:</strong> En <strong>Configuración</strong>, pulsa el botón \"Exportar\". Se descargará un archivo <code>.json</code> con todos tus datos. Guarda este archivo en un lugar seguro.",
-  "manual_data_backup_li2": "<strong>Importar:</strong> Si cambias de ordenador o quieres restaurar una copia, usa el botón \"Importar\" y selecciona el archivo <code>.json</code> que guardaste. <strong>¡Atención!</strong> Esto reemplazará todos los datos actuales.",
+  "manual_data_backup_title_new": "Guardar y Abrir (Copia de Seguridad)",
+  "manual_data_backup_p1": "Los botones para gestionar tus datos ahora se encuentran en la vista principal de <strong>Horario</strong>, en la esquina superior derecha.",
+  "manual_data_backup_li1_new": "<strong>Guardar:</strong> Pulsa este botón para descargar un archivo <code>.json</code> con todos tus datos (horario, clases, alumnos, anotaciones, etc.). Guarda este archivo en un lugar seguro como copia de seguridad.",
+  "manual_data_backup_li2_new": "<strong>Abrir:</strong> Si cambias de ordenador o quieres restaurar una copia, usa este botón y selecciona el archivo <code>.json</code> que guardaste. <strong>¡Atención!</strong> Esto reemplazará todos los datos actuales de la aplicación.",
   "manual_data_delete_title": "Borrar todos los datos",
-  "manual_data_delete_p1": "En la \"Zona de Peligro\" de la configuración, puedes borrar permanentemente toda la información de la aplicación. Esta acción no se puede deshacer, así que úsala con precaución."
+  "manual_data_delete_p1_new": "En la \"Zona de Peligro\" de la página de <strong>Configuración</strong>, puedes borrar permanentemente toda la información de la aplicación. Esta acción no se puede deshacer, así que úsala con precaución."
 }
