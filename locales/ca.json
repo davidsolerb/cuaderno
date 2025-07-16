@@ -81,5 +81,19 @@
   "danger_zone_title": "Zona de Perill",
   "delete_all_data": "Esborra totes les dades",
   "class": "Classe",
-  "general": "General"
+  "general": "General",
+  "delete_activity_confirm_title": "Confirma l'Eliminació",
+  "delete_activity_confirm_text": "Estàs segur que vols eliminar aquesta activitat?",
+  "import_students_alert": "Selecciona una classe i enganxa la llista de l'alumnat.",
+  "generate_schedule_alert": "Si us plau, omple l'hora d'inici, fi i la durada de la classe.",
+  "add_override_alert": "Si us plau, completa tots els camps de la substitució.",
+  "import_data_confirm_title": "Confirma la Importació",
+  "import_data_confirm_text": "Importar un fitxer reemplaçarà totes les dades actuals. N'estàs segur?",
+  "import_success_alert": "Dades importades amb èxit.",
+  "import_error_alert": "Error en importar el fitxer.",
+  "delete_all_data_confirm_title": "Esborra Totes les Dades",
+  "delete_all_data_confirm_text": "Aquesta acció és irreversible i esborrarà totes les dades de l'aplicació. N'estàs segur?",
+  "delete_all_data_success_alert": "Totes les dades han estat esborrades.",
+  "modal_cancel": "Cancel·la",
+  "modal_confirm": "Confirma"
 }
