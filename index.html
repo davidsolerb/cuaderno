@@ -122,7 +122,7 @@
             classEntries: {},
             currentDate: new Date(), // Fecha de referencia para la semana
             selectedActivity: null,
-            editingStudentId: null,
+            selectedStudentId: null,
             editingTimeSlotId: null,
             editingActivityId: null,
         };
@@ -202,6 +202,7 @@
                 case 'classes': viewContent = renderClassesView(); break;
                 case 'settings': viewContent = renderSettingsView(); break;
                 case 'activityDetail': viewContent = renderActivityDetailView(); break;
+                case 'studentDetail': viewContent = renderStudentDetailView(); break;
                 default: viewContent = renderScheduleView();
             }
             mainContent.innerHTML = `<div class="animate-fade-in">${viewContent}</div>`;
@@ -288,8 +289,8 @@
                 const studentsOfClass = state.students.filter(s => c.studentIds?.includes(s.id));
                 const studentsHtml = studentsOfClass.map(s => `
                     <div class="flex justify-between items-center p-2 bg-gray-100 rounded-md">
-                        <span>${s.name}</span>
-                        <button data-action="remove-student-from-class" data-activity-id="${c.id}" data-student-id="${s.id}" class="text-red-500 hover:text-red-700"><i data-lucide="x" class="w-4 h-4"></i></button>
+                        <button data-action="select-student" data-student-id="${s.id}" class="text-left font-medium text-blue-600 hover:underline flex-grow">${s.name}</button>
+                        <button data-action="remove-student-from-class" data-activity-id="${c.id}" data-student-id="${s.id}" class="text-red-500 hover:text-red-700 ml-4 flex-shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
                     </div>
                 `).join('');
 
@@ -312,6 +313,56 @@
                     <h2 class="text-2xl font-bold text-gray-800 mb-6">Clases y Alumnos</h2>
                     <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                         ${classesHtml}
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderStudentDetailView() {
+            const student = state.students.find(s => s.id === state.selectedStudentId);
+            if (!student) {
+                return `<div class="p-6"><p class="text-red-500">Error: Alumno no encontrado.</p><button data-action="back-to-classes">Volver</button></div>`;
+            }
+
+            const enrolledClasses = state.activities.filter(a => a.type === 'class' && a.studentIds?.includes(student.id));
+
+            const classesHtml = enrolledClasses.length > 0 
+                ? enrolledClasses.map(c => `
+                    <li class="flex items-center gap-2 p-2 bg-gray-100 rounded-md">
+                        <span class="w-4 h-4 rounded-full" style="background-color: ${c.color};"></span>
+                        <span>${c.name}</span>
+                    </li>
+                `).join('')
+                : '<p class="text-gray-500">Este alumno no está en ninguna clase.</p>';
+
+            return `
+                <div class="p-6 bg-gray-50 min-h-full">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800">Ficha del Alumno</h2>
+                        <button data-action="back-to-classes" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300 flex items-center gap-2">
+                            <i data-lucide="arrow-left"></i> Volver a Clases
+                        </button>
+                    </div>
+                    <div class="bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+                        <div class="space-y-6">
+                            <div>
+                                <label for="edit-student-name" class="block text-sm font-medium text-gray-700">Nombre del Alumno</label>
+                                <input type="text" id="edit-student-name" value="${student.name}" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-medium text-gray-900 mb-2">Clases en las que está inscrito</h3>
+                                <ul class="space-y-2">${classesHtml}</ul>
+                            </div>
+                            <div>
+                                <label for="edit-student-notes" class="block text-sm font-medium text-gray-700">Anotaciones Generales</label>
+                                <textarea id="edit-student-notes" placeholder="Anotaciones sobre el alumno que no son específicas de una sesión..." class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32">${student.generalNotes || ''}</textarea>
+                            </div>
+                            <div class="flex justify-end">
+                                <button data-action="update-student" data-student-id="${student.id}" class="bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 flex items-center gap-2">
+                                    <i data-lucide="save"></i> Guardar Cambios
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -550,6 +601,9 @@
                 case 'prev-week':
                 case 'next-week':
                 case 'today':
+                case 'select-student':
+                case 'back-to-classes':
+                case 'update-student':
                     if (actionHandlers[action]) actionHandlers[action](id, element);
                     render();
                     break;
@@ -619,6 +673,28 @@
                 if (activity) {
                     activity.studentIds = activity.studentIds?.filter(sid => sid !== studentId);
                     saveState();
+                }
+            },
+            'select-student': (id, element) => {
+                state.selectedStudentId = element.dataset.studentId;
+                state.activeView = 'studentDetail';
+            },
+            'back-to-classes': () => {
+                state.selectedStudentId = null;
+                state.activeView = 'classes';
+            },
+            'update-student': (id, element) => {
+                const studentId = element.dataset.studentId;
+                const student = state.students.find(s => s.id === studentId);
+                if (student) {
+                    const newName = document.getElementById('edit-student-name').value.trim();
+                    const newNotes = document.getElementById('edit-student-notes').value.trim();
+                    if (newName) {
+                        student.name = newName;
+                        student.generalNotes = newNotes;
+                        saveState();
+                        actionHandlers['back-to-classes']();
+                    }
                 }
             },
             // --- Activity Actions ---
@@ -960,7 +1036,7 @@
                 btn.addEventListener('click', () => {
                     state.activeView = btn.dataset.view;
                     state.selectedActivity = null;
-                    state.editingStudentId = null;
+                    state.selectedStudentId = null;
                     updateNavButtons();
                     render();
                 });
