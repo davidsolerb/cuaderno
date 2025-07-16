@@ -79,9 +79,9 @@
                         <div data-lucide="calendar-days" class="w-5 h-5"></div>
                         <span class="hidden sm:inline">Horario</span>
                     </button>
-                    <button data-view="students" class="nav-button flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full p-3 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900">
+                    <button data-view="classes" class="nav-button flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full p-3 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900">
                         <div data-lucide="users" class="w-5 h-5"></div>
-                        <span class="hidden sm:inline">Alumnos</span>
+                        <span class="hidden sm:inline">Clases</span>
                     </button>
                     <button data-view="settings" class="nav-button flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 w-full p-3 text-sm font-medium rounded-md transition-colors text-gray-600 hover:bg-gray-200 hover:text-gray-900">
                         <div data-lucide="settings" class="w-5 h-5"></div>
@@ -177,7 +177,7 @@
 
             switch (state.activeView) {
                 case 'schedule': viewContent = renderScheduleView(); break;
-                case 'students': viewContent = renderStudentsView(); break;
+                case 'classes': viewContent = renderClassesView(); break;
                 case 'settings': viewContent = renderSettingsView(); break;
                 case 'activityDetail': viewContent = renderActivityDetailView(); break;
                 default: viewContent = renderScheduleView();
@@ -202,6 +202,7 @@
         function renderScheduleView() {
             const days = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"];
             const getActivityById = (id) => state.activities.find(c => c.id === id);
+            const today = new Date().toISOString().split('T')[0];
 
             const tableRows = state.timeSlots.map(time => {
                 const cells = days.map(day => {
@@ -209,9 +210,13 @@
                     const activityInfo = activityId ? getActivityById(activityId) : null;
                     let cellContent = `<div class="p-2 h-full min-h-[40px]"></div>`;
                     if (activityInfo) {
+                        const entryId = `${activityInfo.id}_${today}`;
+                        const hasPlan = state.classEntries[entryId] && state.classEntries[entryId].planned;
+                        const planIndicator = hasPlan ? `<span class="absolute top-1 right-1 text-xs">📝</span>` : '';
+
                         const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
                         if (activityInfo.type === 'class') {
-                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${day}' data-time='${time.label}' class="w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}</button>`;
+                            cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${day}' data-time='${time.label}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}${planIndicator}</button>`;
                         } else {
                             cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
                         }
@@ -241,47 +246,43 @@
                 </div>`;
         }
         
-        function renderStudentsView() {
-            const studentsHtml = state.students.sort((a,b) => a.name.localeCompare(b.name)).map(student => {
-                if (state.editingStudentId === student.id) {
-                    return `
-                        <div class="p-4 border rounded-md bg-white space-y-3">
-                            <input type="text" data-action="edit-student-name-input" data-id="${student.id}" value="${student.name}" class="w-full p-2 border rounded-md">
-                            <textarea data-action="edit-student-notes-input" data-id="${student.id}" placeholder="Anotaciones generales sobre el alumno" class="w-full p-2 border rounded-md h-24">${student.generalNotes || ''}</textarea>
-                            <div class="flex gap-2">
-                                <button data-action="save-student" data-id="${student.id}" class="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 text-sm flex items-center gap-1"><i data-lucide="save" class="w-4 h-4"></i> Guardar</button>
-                                <button data-action="cancel-edit-student" class="bg-gray-500 text-white px-3 py-1 rounded-md hover:bg-gray-600 text-sm">Cancelar</button>
-                            </div>
-                        </div>`;
-                }
+        function renderClassesView() {
+            const classes = state.activities.filter(a => a.type === 'class');
+            if (classes.length === 0) {
+                return `<div class="p-6"><h2 class="text-2xl font-bold text-gray-800 mb-6">Clases y Alumnos</h2><p class="text-gray-500">No hay clases creadas. Ve a Configuración para añadir una.</p></div>`;
+            }
+
+            const classesHtml = classes.map(c => {
+                const studentsOfClass = state.students.filter(s => c.studentIds?.includes(s.id));
+                const studentsHtml = studentsOfClass.map(s => `
+                    <div class="flex justify-between items-center p-2 bg-gray-100 rounded-md">
+                        <span>${s.name}</span>
+                        <button data-action="remove-student-from-class" data-activity-id="${c.id}" data-student-id="${s.id}" class="text-red-500 hover:text-red-700"><i data-lucide="x" class="w-4 h-4"></i></button>
+                    </div>
+                `).join('');
+
                 return `
-                    <div class="p-4 border rounded-md bg-gray-50 flex justify-between items-center">
-                        <div>
-                            <p class="font-semibold text-gray-800">${student.name}</p>
-                            <p class="text-sm text-gray-500 italic mt-1">${student.generalNotes || "Sin anotaciones generales."}</p>
-                        </div>
-                        <div class="flex gap-2">
-                            <button data-action="edit-student" data-id="${student.id}" class="text-blue-600 hover:text-blue-800">Editar</button>
-                            <button data-action="delete-student" data-id="${student.id}" class="text-red-600 hover:text-red-800"><i data-lucide="trash-2" class="w-5 h-5"></i></button>
-                        </div>
-                    </div>`;
+                <div class="bg-white p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-bold text-gray-800 mb-4" style="color: ${darkenColor(c.color, 40)}">${c.name}</h3>
+                    <div class="space-y-2 mb-4">
+                        ${studentsHtml || '<p class="text-sm text-gray-500">No hay alumnos en esta clase.</p>'}
+                    </div>
+                    <div class="flex gap-2 border-t pt-4">
+                        <input type="text" id="new-student-name-${c.id}" placeholder="Añadir alumno a esta clase" class="flex-grow p-2 border rounded-md">
+                        <button data-action="add-student-to-class" data-activity-id="${c.id}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                    </div>
+                </div>
+                `;
             }).join('');
 
             return `
                 <div class="p-6 bg-gray-50 min-h-full">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Gestión de Alumnos</h2>
-                    <div class="bg-white p-6 rounded-lg shadow-md mb-6">
-                        <h3 class="text-lg font-semibold mb-3">Añadir Nuevo Alumno</h3>
-                        <div class="flex gap-2">
-                            <input type="text" id="new-student-name" placeholder="Nombre completo del alumno" class="flex-grow p-2 border rounded-md focus:ring-2 focus:ring-blue-500"/>
-                            <button data-action="add-student" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"><i data-lucide="plus-circle" class="w-5 h-5"></i> Añadir</button>
-                        </div>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Clases y Alumnos</h2>
+                    <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${classesHtml}
                     </div>
-                    <div class="bg-white p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3">Lista de Alumnos</h3>
-                        <div class="space-y-3">${studentsHtml.length > 0 ? studentsHtml : '<p class="text-gray-500">No hay alumnos registrados.</p>'}</div>
-                    </div>
-                </div>`;
+                </div>
+            `;
         }
 
         function renderSettingsView() {
@@ -450,7 +451,7 @@
             const annotationsHtml = studentsInClass.length > 0 ? studentsInClass.map(student => `
                 <div key="${student.id}">
                     <label class="block font-medium text-gray-700">${student.name}</label>
-                    <input type="text" data-action="annotation-change" data-student-id="${student.id}" value="${entry.annotations?.[student.id] || ''}" placeholder="Comportamiento, dudas, trabajo..." class="w-full p-2 border rounded-md mt-1"/>
+                    <textarea data-action="annotation-change" data-student-id="${student.id}" placeholder="Comportamiento, dudas, trabajo..." class="w-full p-2 border rounded-md mt-1 h-24">${entry.annotations?.[student.id] || ''}</textarea>
                 </div>
             `).join('') : '<p class="text-gray-500">No hay alumnos asignados a esta clase.</p>';
 
@@ -497,15 +498,11 @@
                 // Actions that re-render the view
                 case 'add-activity':
                 case 'delete-activity':
-                case 'add-student':
-                case 'delete-student':
-                case 'edit-student':
-                case 'save-student':
-                case 'cancel-edit-student':
+                case 'add-student-to-class':
+                case 'remove-student-from-class':
                 case 'add-timeslot':
                 case 'delete-timeslot':
                 case 'reorder-timeslot':
-                case 'toggle-student-in-class':
                 case 'import-students':
                 case 'select-activity':
                 case 'back-to-schedule':
@@ -553,38 +550,39 @@
         
         const actionHandlers = {
             // --- Student Actions ---
-            'add-student': () => {
-                const nameInput = document.getElementById('new-student-name');
+            'add-student-to-class': (id, element) => {
+                const activityId = element.dataset.activityId;
+                const nameInput = document.getElementById(`new-student-name-${activityId}`);
                 const name = nameInput.value.trim();
-                if (name) {
-                    state.students.push({ id: crypto.randomUUID(), name, generalNotes: '' });
-                    nameInput.value = '';
+                if (!name) return;
+
+                const activity = state.activities.find(a => a.id === activityId);
+                if (!activity) return;
+
+                // Check if student already exists (case-insensitive)
+                let student = state.students.find(s => s.name.toLowerCase() === name.toLowerCase());
+
+                if (!student) {
+                    // If not, create a new one
+                    student = { id: crypto.randomUUID(), name: name, generalNotes: '' };
+                    state.students.push(student);
+                }
+                
+                // Add student to class if not already in it
+                if (!activity.studentIds?.includes(student.id)) {
+                    activity.studentIds = [...(activity.studentIds || []), student.id];
+                }
+                
+                nameInput.value = '';
+                saveState();
+            },
+            'remove-student-from-class': (id, element) => {
+                const { activityId, studentId } = element.dataset;
+                const activity = state.activities.find(a => a.id === activityId);
+                if (activity) {
+                    activity.studentIds = activity.studentIds?.filter(sid => sid !== studentId);
                     saveState();
                 }
-            },
-            'delete-student': (id) => {
-                showModal('Confirmar Eliminación', '¿Seguro que quieres eliminar este alumno?', () => {
-                    state.students = state.students.filter(s => s.id !== id);
-                    // Also remove from any class
-                    state.activities.forEach(act => {
-                        act.studentIds = act.studentIds?.filter(sid => sid !== id);
-                    });
-                    saveState();
-                    render();
-                });
-            },
-            'edit-student': (id) => { state.editingStudentId = id; },
-            'cancel-edit-student': () => { state.editingStudentId = null; },
-            'save-student': (id) => {
-                const student = state.students.find(s => s.id === id);
-                if (student) {
-                    const nameInput = document.querySelector(`[data-action="edit-student-name-input"][data-id="${id}"]`);
-                    const notesInput = document.querySelector(`[data-action="edit-student-notes-input"][data-id="${id}"]`);
-                    student.name = nameInput.value.trim();
-                    student.generalNotes = notesInput.value.trim();
-                    saveState();
-                }
-                state.editingStudentId = null;
             },
             // --- Activity Actions ---
             'add-activity': () => {
@@ -634,7 +632,7 @@
                     activity.color = element.value;
                     saveState();
                     // Live update color in schedule view if it's the current view
-                    if(state.activeView === 'schedule') {
+                    if(state.activeView === 'schedule' || state.activeView === 'classes') {
                         render();
                     }
                  }
@@ -805,6 +803,7 @@
             'save-class-entry': () => {
                 saveState();
                 alert('Datos de la sesión guardados.');
+                render(); // Re-render to show plan indicator
             },
             // --- Data Management Actions ---
             'import-students': () => {
@@ -814,14 +813,21 @@
                 if (!activity || studentListText.trim() === '') return alert("Selecciona una clase y pega una lista de alumnos.");
 
                 const names = studentListText.trim().split('\n').filter(name => name.trim() !== '');
-                const newStudentIds = [];
+                
                 names.forEach(name => {
-                    const newStudent = { id: crypto.randomUUID(), name: name.trim(), generalNotes: '' };
-                    state.students.push(newStudent);
-                    newStudentIds.push(newStudent.id);
+                    const trimmedName = name.trim();
+                    if(!trimmedName) return;
+
+                    let student = state.students.find(s => s.name.toLowerCase() === trimmedName.toLowerCase());
+                    if (!student) {
+                        student = { id: crypto.randomUUID(), name: trimmedName, generalNotes: '' };
+                        state.students.push(student);
+                    }
+                    if (!activity.studentIds?.includes(student.id)) {
+                        activity.studentIds = [...(activity.studentIds || []), student.id];
+                    }
                 });
                 
-                activity.studentIds = [...new Set([...(activity.studentIds || []), ...newStudentIds])];
                 saveState();
             },
             'export-data': () => {
