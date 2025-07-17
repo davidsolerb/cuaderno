@@ -2,6 +2,10 @@ body {
     font-family: 'Inter', sans-serif; 
 }
 
+.dark {
+    color-scheme: dark;
+}
+
 .animate-fade-in { 
     animation: fadeIn 0.5s ease-in-out; 
 }
@@ -30,9 +34,14 @@ input[type=number] {
 @media print {
     body {
         font-family: 'Times New Roman', serif; /* Tipografía clásica para informes */
+        background-color: white !important;
+        color: black !important;
     }
     body * {
         visibility: hidden;
+        background-color: transparent !important;
+        color: black !important;
+        border-color: #ccc !important;
     }
     .printable-area, .printable-area * {
         visibility: visible;
@@ -45,8 +54,6 @@ input[type=number] {
         margin: 0;
         padding: 40px;
         font-size: 12pt;
-        color: #000;
-        background-color: white;
     }
     .no-print {
         display: none !important;
@@ -93,7 +100,7 @@ input[type=number] {
         font-family: 'Times New Roman', serif;
         font-size: 12pt;
         line-height: 1.5;
-        color: #333;
+        color: #333 !important;
         resize: none;
         height: auto;
     }
@@ -107,7 +114,6 @@ input[type=number] {
         padding-left: 0;
     }
     #student-sheet-content li {
-        background: transparent !important;
         padding: 4px 0 !important;
         border-bottom: 1px dotted #ccc;
     }
@@ -115,7 +121,6 @@ input[type=number] {
         border-bottom: none;
     }
     #student-sheet-content .p-3.bg-gray-50 {
-        background: transparent !important;
         padding: 15px 0 !important;
         border-top: 1px solid #eee;
     }
