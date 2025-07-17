@@ -14,13 +14,12 @@
     </script>
     
     <script>
-      // Corrección: Se define el objeto `tailwind` antes de que el CDN lo necesite
-      window.tailwind = {
-        config: {
-          darkMode: 'class'
-        }
-      };
+          // Corrección: Se define la configuración en tailwind.config
+          tailwind.config = {
+            darkMode: 'class'
+          };
     </script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <link rel="preconnect" href="https://fonts.googleapis.com">
