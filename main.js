@@ -85,6 +85,10 @@ function attachEventListeners() {
         const eventType = ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) ? 'input' : 'click';
         
         if (el.dataset.listenerAttached === 'true') return;
+        
+        // --- INICIO DE LA CORRECCIÓN: No se añade listener al label ---
+        if (action === 'import-data-mobile') return;
+        // --- FIN DE LA CORRECCIÓN ---
 
         const listener = (e) => {
              if (el.closest('.nav-button')) {
@@ -99,18 +103,17 @@ function attachEventListeners() {
     
     const importInput = document.getElementById('import-file-input');
     if (importInput && importInput.dataset.listenerAttached !== 'true') {
-        importInput.addEventListener('change', handleAction.bind(null, 'import-data', importInput));
+        importInput.addEventListener('change', (e) => handleAction('import-data', importInput, e));
         importInput.dataset.listenerAttached = 'true';
     }
     
-    // Attach listener for mobile import
-    const mobileImportLabel = document.querySelector('[data-action="import-data-mobile"]');
-    if (mobileImportLabel && mobileImportLabel.dataset.listenerAttached !== 'true') {
-        const mobileImportInput = document.getElementById('import-file-input-mobile');
+    // --- INICIO DE LA CORRECCIÓN: Se añade el listener directamente al input móvil ---
+    const mobileImportInput = document.getElementById('import-file-input-mobile');
+    if (mobileImportInput && mobileImportInput.dataset.listenerAttached !== 'true') {
         mobileImportInput.addEventListener('change', (e) => handleAction('import-data', mobileImportInput, e));
-        mobileImportLabel.addEventListener('click', () => mobileImportInput.click());
-        mobileImportLabel.dataset.listenerAttached = 'true';
+        mobileImportInput.dataset.listenerAttached = 'true';
     }
+    // --- FIN DE LA CORRECCIÓN ---
 }
 
 
