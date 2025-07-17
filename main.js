@@ -103,14 +103,9 @@ function attachEventListeners() {
         importInput.dataset.listenerAttached = 'true';
     }
     
-    const mobileActions = document.getElementById('mobile-actions-menu-btn');
-    if(mobileActions && mobileActions.dataset.listenerAttached !== 'true') {
-        mobileActions.addEventListener('click', () => {
-            const menu = document.getElementById('mobile-actions-menu');
-            menu.classList.toggle('hidden');
-        });
-        mobileActions.dataset.listenerAttached = 'true';
-    }
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Se ha eliminado el bloque de código erróneo que estaba aquí.
+    // --- FIN DE LA CORRECCIÓN ---
     
     // Attach listener for mobile import
     const mobileImportLabel = document.querySelector('[data-action="import-data-mobile"]');
