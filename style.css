@@ -33,18 +33,14 @@ input[type=number] {
 /* Estilos de impresión */
 @media print {
     body {
-        font-family: 'Times New Roman', serif; /* Tipografía clásica para informes */
-        background-color: white !important;
-        color: black !important;
+        font-family: 'Times New Roman', serif;
     }
     body * {
         visibility: hidden;
-        background-color: transparent !important;
-        color: black !important;
-        border-color: #ccc !important;
     }
     .printable-area, .printable-area * {
         visibility: visible;
+        color: #000 !important; /* Aseguramos texto negro en impresión */
     }
     .printable-area {
         position: absolute;
@@ -100,7 +96,6 @@ input[type=number] {
         font-family: 'Times New Roman', serif;
         font-size: 12pt;
         line-height: 1.5;
-        color: #333 !important;
         resize: none;
         height: auto;
     }
@@ -114,6 +109,7 @@ input[type=number] {
         padding-left: 0;
     }
     #student-sheet-content li {
+        background: transparent !important;
         padding: 4px 0 !important;
         border-bottom: 1px dotted #ccc;
     }
@@ -121,6 +117,7 @@ input[type=number] {
         border-bottom: none;
     }
     #student-sheet-content .p-3.bg-gray-50 {
+        background: transparent !important;
         padding: 15px 0 !important;
         border-top: 1px solid #eee;
     }
@@ -149,8 +146,8 @@ input[type=number] {
     }
     #printable-schedule button, #printable-schedule div[style*="background-color"] {
         border: 1px solid #ccc !important;
-        background-color: #f0f0f0 !important;
-        color: #000 !important;
+        background-color: #f0f0f0 !important; /* Fondo claro para impresión */
+        color: #000 !important; /* Texto negro para impresión */
         font-size: 8pt !important;
         padding: 2px !important;
         min-height: 0 !important;
