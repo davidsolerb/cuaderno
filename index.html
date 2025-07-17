@@ -9,12 +9,13 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/docx@7.3.0/build/index.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-gray-100">
 
     <div class="flex h-screen">
-        <!-- Sidebar de Navegación -->
         <nav class="flex flex-col justify-between w-16 sm:w-56 bg-white border-r border-gray-200 p-3 no-print">
             <div>
                 <div class="flex items-center gap-3 mb-8 px-2">
@@ -40,7 +41,6 @@
                     </a>
                 </div>
             </div>
-            <!-- Selector de Idioma -->
             <div class="pb-2">
                 <div class="flex justify-center sm:justify-start gap-2 px-2">
                     <button data-lang="es" class="lang-switcher border-2 border-blue-600 rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold text-blue-600">ES</button>
@@ -50,13 +50,10 @@
             </div>
         </nav>
 
-        <!-- Contenido Principal -->
         <main id="main-content" class="flex-1 overflow-y-auto">
-            <!-- El contenido se renderizará aquí -->
-        </main>
+            </main>
     </div>
 
-    <!-- Indicador de Guardado -->
     <div id="save-indicator" class="fixed bottom-5 right-5 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg transition-opacity duration-300 opacity-0 z-50 no-print">
         <div class="flex items-center gap-2">
             <i data-lucide="check-circle" class="w-5 h-5"></i> Guardado
@@ -64,7 +61,6 @@
     </div>
 
 
-    <!-- Modal Genérico -->
     <div id="modal-container" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center p-4 hidden no-print">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-md max-h-full overflow-y-auto">
             <div class="flex justify-between items-center p-4 border-b">
@@ -77,7 +73,6 @@
         </div>
     </div>
 
-    <!-- El script principal ahora es un módulo -->
     <script type="module" src="main.js"></script>
 </body>
 </html>
