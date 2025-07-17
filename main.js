@@ -103,10 +103,6 @@ function attachEventListeners() {
         importInput.dataset.listenerAttached = 'true';
     }
     
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Se ha eliminado el bloque de código erróneo que estaba aquí.
-    // --- FIN DE LA CORRECCIÓN ---
-    
     // Attach listener for mobile import
     const mobileImportLabel = document.querySelector('[data-action="import-data-mobile"]');
     if (mobileImportLabel && mobileImportLabel.dataset.listenerAttached !== 'true') {
