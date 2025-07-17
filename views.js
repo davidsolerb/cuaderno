@@ -206,6 +206,9 @@ export function renderStudentDetailView() {
             <div class="flex justify-between items-center mb-6 no-print">
                 <h2 class="text-2xl font-bold text-gray-800">${t('student_detail_view_title')}</h2>
                 <div class="flex items-center gap-2">
+                     <button data-action="export-student-docx" class="bg-blue-800 text-white px-4 py-2 rounded-md hover:bg-blue-900 flex items-center gap-2">
+                        <i data-lucide="file-text"></i> ${t('export_to_docx')}
+                    </button>
                      <button data-action="print-student-sheet" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
                         <i data-lucide="printer"></i> ${t('print')}
                     </button>
@@ -365,8 +368,7 @@ export function renderSettingsView() {
             <h2 class="text-2xl font-bold text-gray-800">${t('settings_view_title')}</h2>
             <div class="grid lg:grid-cols-2 gap-8 items-start">
                 <div class="space-y-8">
-                     <!-- Fechas del Curso -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
+                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold mb-3">${t('course_dates_title')}</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
@@ -379,7 +381,6 @@ export function renderSettingsView() {
                             </div>
                         </div>
                     </div>
-                    <!-- Gestión de Actividades -->
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold mb-3">${t('activities_management_title')}</h3>
                         <div class="flex gap-2 mb-2">
@@ -392,8 +393,7 @@ export function renderSettingsView() {
                         </div>
                         <div class="space-y-3 max-h-96 overflow-y-auto pr-2">${activitiesHtml}</div>
                     </div>
-                     <!-- Importación Rápida -->
-                    <div class="bg-white p-6 rounded-lg shadow-md">
+                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clipboard-paste" class="w-5 h-5"></i> ${t('quick_import_title')}</h3>
                         <div class="space-y-4">
                             <div><label class="block text-sm font-medium text-gray-700 mb-1">${t('step1_select_class')}</label><select id="import-target-class" class="w-full p-2 border rounded-md"><option value="">${t('choose_a_class')}</option>${state.activities.filter(a => a.type === 'class').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
@@ -403,7 +403,6 @@ export function renderSettingsView() {
                     </div>
                 </div>
                 <div class="space-y-8">
-                    <!-- Generador Automático de Horario -->
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="wand-2" class="w-5 h-5"></i> ${t('schedule_generator_title')}</h3>
                         <div class="grid grid-cols-2 gap-4">
@@ -415,7 +414,6 @@ export function renderSettingsView() {
                         </div>
                         <button data-action="generate-schedule-slots" class="mt-4 w-full bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center justify-center gap-2">${t('generate_slots')}</button>
                     </div>
-                    <!-- Gestión de Franjas Horarias -->
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> ${t('timeslots_management_title')}</h3>
                         <div class="flex gap-2 mb-4">
@@ -424,7 +422,6 @@ export function renderSettingsView() {
                         </div>
                         <div class="space-y-2">${timeSlotsHtml}</div>
                     </div>
-                    <!-- Horario Semanal -->
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold mb-3">${t('weekly_schedule_config_title')}</h3>
                         <div class="overflow-x-auto">
@@ -434,7 +431,6 @@ export function renderSettingsView() {
                             </table>
                         </div>
                     </div>
-                    <!-- Sustituciones de Horario -->
                     <div class="bg-white p-6 rounded-lg shadow-md">
                         <h3 class="text-lg font-semibold mb-3">${t('schedule_overrides_title')}</h3>
                         <div class="space-y-4">
