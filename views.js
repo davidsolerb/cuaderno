@@ -37,6 +37,26 @@ function renderMobileHeaderActions(actions) {
         </div>
     `;
     lucide.createIcons();
+    
+    // --- INICIO DE LA CORRECCIÓN ---
+    // Se añade aquí el código que da funcionalidad al botón del menú móvil.
+    const mobileActionsBtn = document.getElementById('mobile-actions-menu-btn');
+    const mobileActionsMenu = document.getElementById('mobile-actions-menu');
+
+    if (mobileActionsBtn && mobileActionsMenu) {
+        mobileActionsBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Evita que otros eventos de clic se disparen.
+            mobileActionsMenu.classList.toggle('hidden');
+        });
+
+        // Opcional: Cierra el menú si se hace clic fuera de él.
+        document.addEventListener('click', (e) => {
+            if (!mobileActionsMenu.contains(e.target) && !mobileActionsBtn.contains(e.target)) {
+                mobileActionsMenu.classList.add('hidden');
+            }
+        });
+    }
+    // --- FIN DE LA CORRECCIÓN ---
 }
 
 export function renderScheduleView() {
@@ -107,7 +127,6 @@ export function renderScheduleView() {
 
                     const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
                     if (activityInfo.type === 'class') {
-                        const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
                         cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${dayKey}' data-time='${time.label}' data-date='${formattedCellDate}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}${planIndicator}</button>`;
                     } else {
                         cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
