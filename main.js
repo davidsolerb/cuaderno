@@ -3,17 +3,20 @@
 import { state, loadState } from './state.js';
 import * as views from './views.js';
 import { actionHandlers } from './actions.js';
-import { initI18n } from './i18n.js'; // Importamos el inicializador de i18n
+import { initI18n, t } from './i18n.js';
 
 const mainContent = document.getElementById('main-content');
 const navButtons = document.querySelectorAll('.nav-button');
+const sidebar = document.getElementById('sidebar');
+const openSidebarBtn = document.getElementById('open-sidebar-btn');
+const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+const sidebarOverlay = document.getElementById('sidebar-overlay');
+const mobileHeaderTitle = document.getElementById('mobile-header-title');
 
 function render() {
-    mainContent.innerHTML = ''; // Limpiar vista anterior
+    mainContent.innerHTML = '';
     let viewContent = '';
 
-    // Las funciones de las vistas (en views.js) ahora usarán el traductor,
-    // por lo que el contenido se generará en el idioma correcto.
     switch (state.activeView) {
         case 'schedule': viewContent = views.renderScheduleView(); break;
         case 'classes': viewContent = views.renderClassesView(); break;
@@ -24,8 +27,20 @@ function render() {
     }
     mainContent.innerHTML = `<div class="animate-fade-in">${viewContent}</div>`;
     
+    updateMobileHeader();
     lucide.createIcons();
     attachEventListeners();
+}
+
+function updateMobileHeader() {
+    const keyMap = {
+        schedule: 'schedule_view_title',
+        classes: 'classes_view_title',
+        settings: 'settings_view_title',
+        activityDetail: 'activity_detail_view_title',
+        studentDetail: 'student_detail_view_title'
+    };
+    mobileHeaderTitle.textContent = t(keyMap[state.activeView] || 'app_title');
 }
 
 function updateNavButtons() {
@@ -66,7 +81,12 @@ function attachEventListeners() {
         
         if (el.dataset.listenerAttached === 'true') return;
 
-        el.addEventListener(eventType, (e) => handleAction(action, el, e));
+        el.addEventListener(eventType, (e) => {
+             if (el.closest('.nav-button')) {
+                toggleSidebar(false);
+            }
+            handleAction(action, el, e)
+        });
         el.dataset.listenerAttached = 'true';
     });
     
@@ -75,16 +95,35 @@ function attachEventListeners() {
         importInput.addEventListener('change', handleAction.bind(null, 'import-data', importInput));
         importInput.dataset.listenerAttached = 'true';
     }
+    
+    const mobileActions = document.getElementById('mobile-actions-menu-btn');
+    if(mobileActions) {
+        mobileActions.addEventListener('click', () => {
+            const menu = document.getElementById('mobile-actions-menu');
+            menu.classList.toggle('hidden');
+        });
+    }
 }
 
-// La función principal ahora es ASÍNCRONA
+function toggleSidebar(show) {
+    if (show) {
+        sidebar.classList.remove('-translate-x-full');
+        sidebarOverlay.classList.remove('hidden');
+    } else {
+        sidebar.classList.add('-translate-x-full');
+        sidebarOverlay.classList.add('hidden');
+    }
+}
+
 async function init() {
-    // AÑADIMOS 'await' para que el programa espere aquí hasta que las traducciones estén listas
-    await initI18n(render); 
+    await initI18n(() => {
+        render();
+        updateNavButtons();
+    }); 
     
     loadState();
+    render();
     updateNavButtons();
-    render(); // El primer render de la aplicación
     
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -93,11 +132,23 @@ async function init() {
             state.selectedStudentId = null;
             updateNavButtons();
             render();
+            if (window.innerWidth < 640) {
+                toggleSidebar(false);
+            }
         });
     });
+    
+    openSidebarBtn.addEventListener('click', () => toggleSidebar(true));
+    closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
+    sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
 
     document.addEventListener('render', () => render());
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 640) {
+            sidebar.classList.remove('-translate-x-full');
+            sidebarOverlay.classList.add('hidden');
+        }
+    });
 }
 
-// Iniciar la aplicación
 init();
