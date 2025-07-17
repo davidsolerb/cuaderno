@@ -77,6 +77,102 @@ export const actionHandlers = {
             saveState();
         }
     },
+    'export-student-docx': () => {
+        const student = state.students.find(s => s.id === state.selectedStudentId);
+        if (!student) return;
+
+        const enrolledClasses = state.activities.filter(a => a.type === 'class' && a.studentIds?.includes(student.id));
+        const studentAnnotations = Object.entries(state.classEntries)
+            .map(([entryId, entryData]) => {
+                const annotation = entryData.annotations?.[student.id];
+                if (annotation && annotation.trim() !== '') {
+                    const [activityId, date] = entryId.split('_');
+                    const activity = state.activities.find(a => a.id === activityId);
+                    return {
+                        date,
+                        activityName: activity ? activity.name : 'Clase eliminada',
+                        annotation
+                    };
+                }
+                return null;
+            })
+            .filter(Boolean)
+            .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        const doc = new docx.Document({
+            sections: [{
+                properties: {},
+                children: [
+                    new docx.Paragraph({
+                        children: [
+                            new docx.TextRun({
+                                text: student.name,
+                                bold: true,
+                                size: 32,
+                            }),
+                        ],
+                    }),
+                    new docx.Paragraph({ text: "" }),
+                    new docx.Paragraph({
+                        children: [
+                            new docx.TextRun({
+                                text: t('enrolled_classes_title'),
+                                bold: true,
+                                size: 24,
+                            }),
+                        ],
+                    }),
+                    ...enrolledClasses.map(c => new docx.Paragraph({
+                        text: c.name,
+                        bullet: {
+                            level: 0
+                        }
+                    })),
+                     new docx.Paragraph({ text: "" }),
+                    new docx.Paragraph({
+                        children: [
+                            new docx.TextRun({
+                                text: t('general_notes_label'),
+                                bold: true,
+                                size: 24,
+                            }),
+                        ],
+                    }),
+                    new docx.Paragraph({
+                        text: student.generalNotes || ''
+                    }),
+                    new docx.Paragraph({ text: "" }),
+                    new docx.Paragraph({
+                        children: [
+                            new docx.TextRun({
+                                text: t('session_notes_history_title'),
+                                bold: true,
+                                size: 24,
+                            }),
+                        ],
+                    }),
+                    ...studentAnnotations.flatMap(item => [
+                        new docx.Paragraph({
+                            children: [
+                                new docx.TextRun({
+                                    text: `${item.activityName} - ${new Date(item.date + 'T00:00:00').toLocaleDateString(document.documentElement.lang, { year: 'numeric', month: 'long', day: 'numeric' })}`,
+                                    bold: true,
+                                }),
+                            ],
+                        }),
+                        new docx.Paragraph({
+                            text: item.annotation,
+                        }),
+                        new docx.Paragraph({ text: "" }),
+                    ])
+                ],
+            }],
+        });
+
+        docx.Packer.toBlob(doc).then(blob => {
+            saveAs(blob, `informe-${student.name.replace(/ /g,"_")}.docx`);
+        });
+    },
     // --- Activity Actions ---
     'add-activity': () => {
         const nameInput = document.getElementById('new-activity-name');
