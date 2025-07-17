@@ -15,12 +15,15 @@ function renderMobileHeaderActions(actions) {
     
     const buttonsHtml = actions.map(action => {
         if(action.action === 'import-data-mobile') {
-            // --- CORRECCIÓN 1: Se añade el data-action a la etiqueta label ---
-            return `<label data-action="import-data-mobile" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
-                        <i data-lucide="${action.icon}" class="w-4 h-4"></i>
-                        <span>${action.label}</span>
-                        <input type="file" id="import-file-input-mobile" accept=".json" class="hidden"/>
-                    </label>`;
+            // --- INICIO DE LA CORRECCIÓN 1: Se usa label for para la importación móvil ---
+            return `
+                <label for="import-file-input-mobile" data-action="import-data-mobile" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
+                    <i data-lucide="${action.icon}" class="w-4 h-4"></i>
+                    <span>${action.label}</span>
+                </label>
+                <input type="file" id="import-file-input-mobile" accept=".json" class="hidden"/>
+            `;
+            // --- FIN DE LA CORRECCIÓN 1 ---
         }
         return `<button data-action="${action.action}" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
             <i data-lucide="${action.icon}" class="w-4 h-4"></i>
@@ -62,12 +65,13 @@ export function renderScheduleView() {
     const startOfWeek = getWeekStartDate(state.currentDate);
     const today = new Date();
 
-    // --- CORRECCIÓN 2: Se elimina el setTimeout que envolvía esta función ---
+    // --- INICIO DE LA CORRECCIÓN 2: Se elimina el setTimeout ---
     renderMobileHeaderActions([
         { action: 'export-data', label: t('save_file'), icon: 'save' },
         { action: 'import-data-mobile', label: t('open_file'), icon: 'folder-open' },
         { action: 'print-schedule', label: t('print'), icon: 'printer' }
     ]);
+    // --- FIN DE LA CORRECCIÓN 2 ---
     
     const headerCells = days.map((dayName, dayIndex) => {
         const cellDate = new Date(startOfWeek);
