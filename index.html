@@ -13,12 +13,13 @@
       }
     </script>
     
-    <script>
-          // Corrección: Se define la configuración en tailwind.config
-          tailwind.config = {
-            darkMode: 'class'
-          };
-    </script>
+<script>
+  // Se define la configuración DENTRO del objeto window.tailwind
+  window.tailwind = {
+    darkMode: 'class'
+    // Aquí podrías añadir más configuraciones de Tailwind si quisieras
+  };
+</script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     
