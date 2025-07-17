@@ -2,10 +2,6 @@ body {
     font-family: 'Inter', sans-serif; 
 }
 
-.dark {
-    color-scheme: dark;
-}
-
 .animate-fade-in { 
     animation: fadeIn 0.5s ease-in-out; 
 }
