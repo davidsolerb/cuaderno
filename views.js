@@ -4,12 +4,46 @@ import { state } from './state.js';
 import { darkenColor, getWeekStartDate, getWeekDateRange, formatDate, isSameDate, findNextSession, findPreviousSession, DAY_KEYS } from './utils.js';
 import { t } from './i18n.js'; // Importamos la función de traducción
 
+function renderMobileHeaderActions(actions) {
+    const container = document.getElementById('mobile-header-actions');
+    if (!container) return;
+    
+    if (actions.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    const buttonsHtml = actions.map(action => 
+        `<button data-action="${action.action}" class="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-2">
+            <i data-lucide="${action.icon}" class="w-4 h-4"></i>
+            <span>${action.label}</span>
+        </button>`
+    ).join('');
+
+    container.innerHTML = `
+        <button id="mobile-actions-menu-btn" class="p-2 rounded-md hover:bg-gray-200">
+            <i data-lucide="more-vertical" class="w-5 h-5"></i>
+        </button>
+        <div id="mobile-actions-menu" class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-30 hidden">
+            ${buttonsHtml}
+        </div>
+    `;
+    lucide.createIcons({
+        nodes: [container.querySelector('i')]
+    });
+}
+
 export function renderScheduleView() {
-    // Usar las claves neutras para generar los nombres de los días traducidos
     const days = DAY_KEYS.map(dayKey => t(dayKey.toLowerCase()));
     const getActivityById = (id) => state.activities.find(c => c.id === id);
     const startOfWeek = getWeekStartDate(state.currentDate);
     const today = new Date();
+
+    setTimeout(() => renderMobileHeaderActions([
+        { action: 'export-data', label: t('save_file'), icon: 'save' },
+        { action: 'import-data-mobile', label: t('open_file'), icon: 'folder-open' },
+        { action: 'print-schedule', label: t('print'), icon: 'printer' }
+    ]), 0);
     
     const headerCells = days.map((dayName, dayIndex) => {
         const cellDate = new Date(startOfWeek);
@@ -17,7 +51,8 @@ export function renderScheduleView() {
         const isToday = isSameDate(cellDate, today);
         const formattedDate = cellDate.toLocaleDateString(document.documentElement.lang, { day: '2-digit', month: '2-digit' });
         return `<th class="p-2 border ${isToday ? 'bg-blue-100' : ''}">
-                    <div>${dayName}</div>
+                    <div class="hidden sm:block">${dayName}</div>
+                    <div class="sm:hidden">${dayName.substring(0,3)}</div>
                     <div class="text-xs font-normal text-gray-500">${formattedDate}</div>
                 </th>`;
     }).join('');
@@ -66,7 +101,7 @@ export function renderScheduleView() {
 
                     const style = `background-color: ${activityInfo.color}; color: ${darkenColor(activityInfo.color, 40)}; border: 1px solid ${darkenColor(activityInfo.color, 10)}`;
                     if (activityInfo.type === 'class') {
-                        cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${dayKey}' data-time='${time.label}' data-date='${formattedCellDate}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold" style="${style}">${activityInfo.name}${planIndicator}</button>`;
+                        cellContent = `<button data-action="select-activity" data-activity-id='${activityInfo.id}' data-day='${dayKey}' data-time='${time.label}' data-date='${formattedCellDate}' class="relative w-full h-full p-2 rounded-md transition-colors text-sm font-semibold">${activityInfo.name}${planIndicator}</button>`;
                     } else {
                         cellContent = `<div class="w-full h-full p-2 rounded-md text-sm font-semibold flex items-center justify-center" style="${style}">${activityInfo.name}</div>`;
                     }
@@ -78,8 +113,8 @@ export function renderScheduleView() {
     }).join('');
 
     return `
-        <div class="p-6 bg-gray-50 min-h-full">
-            <div class="flex justify-between items-center mb-6 no-print">
+        <div class="p-4 sm:p-6 bg-gray-50 min-h-full">
+            <div class="hidden sm:flex justify-between items-center mb-6 no-print">
                  <h2 class="text-2xl font-bold text-gray-800">${t('schedule_view_title')}</h2>
                  <div class="flex items-center gap-2">
                     <button data-action="export-data" class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center gap-2">
@@ -92,18 +127,20 @@ export function renderScheduleView() {
                     
                     <div class="w-px h-6 bg-gray-300 mx-2"></div>
 
-                    <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-left"></i></button>
-                    <span class="font-semibold text-lg">${getWeekDateRange(state.currentDate)}</span>
-                    <button data-action="next-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-right"></i></button>
-                    <button data-action="today" class="bg-gray-600 text-white px-3 py-2 text-sm rounded-md hover:bg-gray-700">${t('today')}</button>
                     <button data-action="print-schedule" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
                         <i data-lucide="printer" class="w-5 h-5"></i> ${t('print')}
                     </button>
                  </div>
             </div>
+             <div class="flex justify-between items-center mb-4">
+                <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-left"></i></button>
+                <span class="font-semibold text-center text-lg">${getWeekDateRange(state.currentDate)}</span>
+                <button data-action="next-week" class="p-2 rounded-md hover:bg-gray-200"><i data-lucide="chevron-right"></i></button>
+                <button data-action="today" class="bg-gray-600 text-white px-3 py-2 text-sm rounded-md hover:bg-gray-700 ml-4">${t('today')}</button>
+            </div>
             <div id="printable-schedule" class="printable-area">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block text-center">${t('schedule_view_title')} - ${getWeekDateRange(state.currentDate)}</h2>
-                <div class="bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+                <div class="bg-white p-0 sm:p-4 rounded-lg shadow-md overflow-x-auto">
                     <table class="w-full border-collapse text-center">
                         <thead><tr class="bg-gray-100"><th class="p-2 border w-24">${t('hour')}</th>${headerCells}</tr></thead>
                         <tbody>${tableRows.length > 0 ? tableRows : `<tr><td colspan="6" class="p-4 text-gray-500">${t('add_timeslots_in_settings')}</td></tr>`}</tbody>
@@ -114,9 +151,10 @@ export function renderScheduleView() {
 }
 
 export function renderClassesView() {
+    setTimeout(() => renderMobileHeaderActions([]), 0);
     const classes = state.activities.filter(a => a.type === 'class');
     if (classes.length === 0) {
-        return `<div class="p-6"><h2 class="text-2xl font-bold text-gray-800 mb-6">${t('classes_view_title')}</h2><p class="text-gray-500">${t('no_classes_created')}</p></div>`;
+        return `<div class="p-4 sm:p-6"><h2 class="text-2xl font-bold text-gray-800 mb-6">${t('classes_view_title')}</h2><p class="text-gray-500">${t('no_classes_created')}</p></div>`;
     }
 
     const classesHtml = classes.map(c => {
@@ -129,22 +167,22 @@ export function renderClassesView() {
         `).join('');
 
         return `
-        <div class="bg-white p-6 rounded-lg shadow-md">
+        <div class="bg-white p-4 sm:p-6 rounded-lg shadow-md">
             <h3 class="text-xl font-bold text-gray-800 mb-4" style="color: ${darkenColor(c.color, 40)}">${c.name}</h3>
             <div class="space-y-2 mb-4">
                 ${studentsHtml || `<p class="text-sm text-gray-500">${t('no_students_in_class')}</p>`}
             </div>
-            <div class="flex gap-2 border-t pt-4">
+            <div class="flex flex-col sm:flex-row gap-2 border-t pt-4">
                 <input type="text" id="new-student-name-${c.id}" placeholder="${t('add_student_placeholder')}" class="flex-grow p-2 border rounded-md">
-                <button data-action="add-student-to-class" data-activity-id="${c.id}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"><i data-lucide="plus" class="w-5 h-5"></i></button>
+                <button data-action="add-student-to-class" data-activity-id="${c.id}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex-shrink-0"><i data-lucide="plus" class="w-5 h-5 sm:hidden"></i><span class="hidden sm:inline">${t('add')}</span></button>
             </div>
         </div>
         `;
     }).join('');
 
     return `
-        <div class="p-6 bg-gray-50 min-h-full">
-            <h2 class="text-2xl font-bold text-gray-800 mb-6">${t('classes_view_title')}</h2>
+        <div class="p-4 sm:p-6 bg-gray-50 min-h-full">
+            <h2 class="hidden sm:block text-2xl font-bold text-gray-800 mb-6">${t('classes_view_title')}</h2>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 ${classesHtml}
             </div>
@@ -153,6 +191,12 @@ export function renderClassesView() {
 }
 
 export function renderStudentDetailView() {
+    setTimeout(() => renderMobileHeaderActions([
+        { action: 'export-student-docx', label: t('export_to_docx'), icon: 'file-text' },
+        { action: 'print-student-sheet', label: t('print'), icon: 'printer' },
+        { action: 'back-to-classes', label: t('back'), icon: 'arrow-left' },
+    ]), 0);
+
     const student = state.students.find(s => s.id === state.selectedStudentId);
     if (!student) {
         return `<div class="p-6"><p class="text-red-500">${t('student_not_found')}</p><button data-action="back-to-classes">${t('back')}</button></div>`;
@@ -202,8 +246,8 @@ export function renderStudentDetailView() {
         : `<p class="text-gray-500">${t('no_session_notes')}</p>`;
 
     return `
-        <div class="p-6 bg-gray-50 min-h-full">
-            <div class="flex justify-between items-center mb-6 no-print">
+        <div class="p-4 sm:p-6 bg-gray-50 min-h-full">
+            <div class="hidden sm:flex justify-between items-center mb-6 no-print">
                 <h2 class="text-2xl font-bold text-gray-800">${t('student_detail_view_title')}</h2>
                 <div class="flex items-center gap-2">
                      <button data-action="export-student-docx" class="bg-blue-800 text-white px-4 py-2 rounded-md hover:bg-blue-900 flex items-center gap-2">
@@ -217,7 +261,7 @@ export function renderStudentDetailView() {
                     </button>
                 </div>
             </div>
-            <div id="student-sheet-content" class="printable-area bg-white p-6 rounded-lg shadow-md max-w-4xl mx-auto">
+            <div id="student-sheet-content" class="printable-area bg-white p-4 sm:p-6 rounded-lg shadow-md max-w-4xl mx-auto">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 print:block hidden">${student.name}</h2>
                 <div class="space-y-6">
                     <div>
@@ -243,6 +287,7 @@ export function renderStudentDetailView() {
 }
 
 export function renderSettingsView() {
+    setTimeout(() => renderMobileHeaderActions([]), 0);
      const activitiesHtml = state.activities.map(act => {
         let studentsInClassHtml = '';
         if (act.type === 'class') {
@@ -364,8 +409,8 @@ export function renderSettingsView() {
     }).join('');
 
     return `
-        <div class="p-6 bg-gray-50 min-h-full space-y-8">
-            <h2 class="text-2xl font-bold text-gray-800">${t('settings_view_title')}</h2>
+        <div class="p-4 sm:p-6 bg-gray-50 min-h-full space-y-8">
+            <h2 class="hidden sm:block text-2xl font-bold text-gray-800">${t('settings_view_title')}</h2>
             <div class="grid lg:grid-cols-2 gap-8 items-start">
                 <div class="space-y-8">
                      <div class="bg-white p-6 rounded-lg shadow-md">
@@ -458,6 +503,10 @@ export function renderSettingsView() {
 }
 
 export function renderActivityDetailView() {
+    setTimeout(() => renderMobileHeaderActions([
+        { action: 'back-to-schedule', label: t('back_to_schedule'), icon: 'arrow-left' }
+    ]), 0);
+
     const { name, day, time, date, id: activityId } = state.selectedActivity;
     const entryId = `${activityId}_${date}`;
     const entry = state.classEntries[entryId] || { planned: '', completed: '', annotations: {} };
@@ -478,15 +527,16 @@ export function renderActivityDetailView() {
 
 
     return `
-        <div class="p-6 bg-gray-50 min-h-full">
-            <div class="flex justify-between items-center mb-2 no-print">
+        <div class="p-4 sm:p-6 bg-gray-50 min-h-full">
+            <div class="hidden sm:flex justify-between items-center mb-2">
                 <div>
                     <h2 class="text-2xl font-bold text-gray-800">${name}</h2>
                     <p class="text-gray-500">${t(day.toLowerCase())}, ${new Date(date + 'T00:00:00').toLocaleDateString(document.documentElement.lang, {day: 'numeric', month: 'long', year: 'numeric'})} (${time})</p>
                 </div>
                 <button data-action="back-to-schedule" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-300">${t('back_to_schedule')}</button>
             </div>
-            <div class="flex justify-between items-center mb-6 no-print">
+             <p class="sm:hidden text-gray-500 mb-4">${t(day.toLowerCase())}, ${new Date(date + 'T00:00:00').toLocaleDateString(document.documentElement.lang, {day: 'numeric', month: 'long', year: 'numeric'})} (${time})</p>
+            <div class="flex justify-between items-center mb-6">
                 ${prevButton}
                 ${nextButton}
             </div>
