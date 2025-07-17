@@ -15,11 +15,14 @@ function renderMobileHeaderActions(actions) {
     
     const buttonsHtml = actions.map(action => {
         if(action.action === 'import-data-mobile') {
-            return `<label class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
+            // --- INICIO DE LA CORRECCIÓN 1 ---
+            // Se añade el atributo data-action a la etiqueta <label>
+            return `<label data-action="import-data-mobile" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 cursor-pointer">
                         <i data-lucide="${action.icon}" class="w-4 h-4"></i>
                         <span>${action.label}</span>
                         <input type="file" id="import-file-input-mobile" accept=".json" class="hidden"/>
                     </label>`;
+            // --- FIN DE LA CORRECCIÓN 1 ---
         }
         return `<button data-action="${action.action}" class="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2">
             <i data-lucide="${action.icon}" class="w-4 h-4"></i>
@@ -38,25 +41,21 @@ function renderMobileHeaderActions(actions) {
     `;
     lucide.createIcons();
     
-    // --- INICIO DE LA CORRECCIÓN ---
-    // Se añade aquí el código que da funcionalidad al botón del menú móvil.
     const mobileActionsBtn = document.getElementById('mobile-actions-menu-btn');
     const mobileActionsMenu = document.getElementById('mobile-actions-menu');
 
     if (mobileActionsBtn && mobileActionsMenu) {
         mobileActionsBtn.addEventListener('click', (e) => {
-            e.stopPropagation(); // Evita que otros eventos de clic se disparen.
+            e.stopPropagation();
             mobileActionsMenu.classList.toggle('hidden');
         });
 
-        // Opcional: Cierra el menú si se hace clic fuera de él.
         document.addEventListener('click', (e) => {
             if (!mobileActionsMenu.contains(e.target) && !mobileActionsBtn.contains(e.target)) {
                 mobileActionsMenu.classList.add('hidden');
             }
         });
     }
-    // --- FIN DE LA CORRECCIÓN ---
 }
 
 export function renderScheduleView() {
@@ -65,11 +64,14 @@ export function renderScheduleView() {
     const startOfWeek = getWeekStartDate(state.currentDate);
     const today = new Date();
 
-    setTimeout(() => renderMobileHeaderActions([
+    // --- INICIO DE LA CORRECCIÓN 2 ---
+    // Se elimina el setTimeout
+    renderMobileHeaderActions([
         { action: 'export-data', label: t('save_file'), icon: 'save' },
         { action: 'import-data-mobile', label: t('open_file'), icon: 'folder-open' },
         { action: 'print-schedule', label: t('print'), icon: 'printer' }
-    ]), 0);
+    ]);
+    // --- FIN DE LA CORRECCIÓN 2 ---
     
     const headerCells = days.map((dayName, dayIndex) => {
         const cellDate = new Date(startOfWeek);
@@ -177,7 +179,7 @@ export function renderScheduleView() {
 }
 
 export function renderClassesView() {
-    setTimeout(() => renderMobileHeaderActions([]), 0);
+    renderMobileHeaderActions([]);
     const classes = state.activities.filter(a => a.type === 'class');
     if (classes.length === 0) {
         return `<div class="p-4 sm:p-6"><h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">${t('classes_view_title')}</h2><p class="text-gray-500 dark:text-gray-400">${t('no_classes_created')}</p></div>`;
@@ -217,11 +219,11 @@ export function renderClassesView() {
 }
 
 export function renderStudentDetailView() {
-    setTimeout(() => renderMobileHeaderActions([
+    renderMobileHeaderActions([
         { action: 'export-student-docx', label: t('export_to_docx'), icon: 'file-text' },
         { action: 'print-student-sheet', label: t('print'), icon: 'printer' },
         { action: 'back-to-classes', label: t('back'), icon: 'arrow-left' },
-    ]), 0);
+    ]);
 
     const student = state.students.find(s => s.id === state.selectedStudentId);
     if (!student) {
@@ -313,7 +315,7 @@ export function renderStudentDetailView() {
 }
 
 export function renderSettingsView() {
-    setTimeout(() => renderMobileHeaderActions([]), 0);
+    renderMobileHeaderActions([]);
      const activitiesHtml = state.activities.map(act => {
         let studentsInClassHtml = '';
         if (act.type === 'class') {
@@ -529,9 +531,9 @@ export function renderSettingsView() {
 }
 
 export function renderActivityDetailView() {
-    setTimeout(() => renderMobileHeaderActions([
+    renderMobileHeaderActions([
         { action: 'back-to-schedule', label: t('back_to_schedule'), icon: 'arrow-left' }
-    ]), 0);
+    ]);
 
     const { name, day, time, date, id: activityId } = state.selectedActivity;
     const entryId = `${activityId}_${date}`;
