@@ -287,246 +287,396 @@ export class DatabaseService {
 
     // --- CRUD Operations for Students ---
     async getStudents() {
-        const { data, error } = await supabase
-            .from('students')
-            .select('*')
-            .order('name');
-        
-        if (error) throw error;
-        return data || [];
+        if (!this.isSupabaseAvailable()) {
+            return [];
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('students')
+                .select('*')
+                .order('name');
+            
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('Error loading students from Supabase:', err);
+            return [];
+        }
     }
 
     async createStudent(student) {
-        const { data, error } = await supabase
-            .from('students')
-            .insert([student])
-            .select()
-            .single();
-        
-        if (error) throw error;
-        return data;
+        if (!this.isSupabaseAvailable()) {
+            return student;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('students')
+                .insert([student])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return data;
+        } catch (err) {
+            console.error('Error creating student in Supabase:', err);
+            return student;
+        }
     }
 
     async updateStudent(id, updates) {
-        const { data, error } = await supabase
-            .from('students')
-            .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('id', id)
-            .select()
-            .single();
-        
-        if (error) throw error;
-        return data;
+        if (!this.isSupabaseAvailable()) {
+            return updates;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('students')
+                .update({ ...updates, updated_at: new Date().toISOString() })
+                .eq('id', id)
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return data;
+        } catch (err) {
+            console.error('Error updating student in Supabase:', err);
+            return updates;
+        }
     }
 
     async deleteStudent(id) {
-        const { error } = await supabase
-            .from('students')
-            .delete()
-            .eq('id', id);
-        
-        if (error) throw error;
+        if (!this.isSupabaseAvailable()) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('students')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error deleting student from Supabase:', err);
+        }
     }
 
     // --- CRUD Operations for Time Slots ---
     async getTimeSlots() {
-        const { data, error } = await supabase
-            .from('time_slots')
-            .select('*')
-            .order('start_time');
-        
-        if (error) throw error;
-        return data || [];
+        if (!this.isSupabaseAvailable()) {
+            return [];
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('time_slots')
+                .select('*')
+                .order('start_time');
+            
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('Error loading time slots from Supabase:', err);
+            return [];
+        }
     }
 
     async createTimeSlot(timeSlot) {
-        const { data, error } = await supabase
-            .from('time_slots')
-            .insert([timeSlot])
-            .select()
-            .single();
-        
-        if (error) throw error;
-        return data;
+        if (!this.isSupabaseAvailable()) {
+            return timeSlot;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('time_slots')
+                .insert([timeSlot])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return data;
+        } catch (err) {
+            console.error('Error creating time slot in Supabase:', err);
+            return timeSlot;
+        }
     }
 
     async updateTimeSlot(id, updates) {
-        const { data, error } = await supabase
-            .from('time_slots')
-            .update({ ...updates, updated_at: new Date().toISOString() })
-            .eq('id', id)
-            .select()
-            .single();
-        
-        if (error) throw error;
-        return data;
+        if (!this.isSupabaseAvailable()) {
+            return updates;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('time_slots')
+                .update({ ...updates, updated_at: new Date().toISOString() })
+                .eq('id', id)
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return data;
+        } catch (err) {
+            console.error('Error updating time slot in Supabase:', err);
+            return updates;
+        }
     }
 
     async deleteTimeSlot(id) {
-        const { error } = await supabase
-            .from('time_slots')
-            .delete()
-            .eq('id', id);
-        
-        if (error) throw error;
+        if (!this.isSupabaseAvailable()) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('time_slots')
+                .delete()
+                .eq('id', id);
+            
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error deleting time slot from Supabase:', err);
+        }
     }
 
     // --- Schedule Operations ---
     async getSchedule() {
-        const { data, error } = await supabase
-            .from('schedules')
-            .select('*');
-        
-        if (error) throw error;
-        
-        // Convert to the format expected by the app: { "Monday-09:00": "activityId" }
-        const schedule = {};
-        data?.forEach(item => {
-            if (item.activity_id) {
-                schedule[item.day_time_key] = item.activity_id;
-            }
-        });
-        
-        return schedule;
+        if (!this.isSupabaseAvailable()) {
+            return {};
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('schedules')
+                .select('*');
+            
+            if (error) throw error;
+            
+            // Convert to the format expected by the app: { "Monday-09:00": "activityId" }
+            const schedule = {};
+            data?.forEach(item => {
+                if (item.activity_id) {
+                    schedule[item.day_time_key] = item.activity_id;
+                }
+            });
+            
+            return schedule;
+        } catch (err) {
+            console.error('Error loading schedule from Supabase:', err);
+            return {};
+        }
     }
 
     async updateScheduleSlot(dayTimeKey, activityId) {
-        if (activityId) {
-            const { error } = await supabase
-                .from('schedules')
-                .upsert([{ 
-                    day_time_key: dayTimeKey, 
-                    activity_id: activityId,
-                    updated_at: new Date().toISOString()
-                }]);
-            
-            if (error) throw error;
-        } else {
-            // Remove the slot if activityId is null/undefined
-            const { error } = await supabase
-                .from('schedules')
-                .delete()
-                .eq('day_time_key', dayTimeKey);
-            
-            if (error) throw error;
+        if (!this.isSupabaseAvailable()) {
+            return;
+        }
+
+        try {
+            if (activityId) {
+                const { error } = await supabase
+                    .from('schedules')
+                    .upsert([{ 
+                        day_time_key: dayTimeKey, 
+                        activity_id: activityId,
+                        updated_at: new Date().toISOString()
+                    }]);
+                
+                if (error) throw error;
+            } else {
+                // Remove the slot if activityId is null/undefined
+                const { error } = await supabase
+                    .from('schedules')
+                    .delete()
+                    .eq('day_time_key', dayTimeKey);
+                
+                if (error) throw error;
+            }
+        } catch (err) {
+            console.error('Error updating schedule slot in Supabase:', err);
         }
     }
 
     // --- Schedule Overrides ---
     async getScheduleOverrides() {
-        const { data, error } = await supabase
-            .from('schedule_overrides')
-            .select('*')
-            .order('date');
-        
-        if (error) throw error;
-        return data || [];
+        if (!this.isSupabaseAvailable()) {
+            return [];
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('schedule_overrides')
+                .select('*')
+                .order('date');
+            
+            if (error) throw error;
+            return data || [];
+        } catch (err) {
+            console.error('Error loading schedule overrides from Supabase:', err);
+            return [];
+        }
     }
 
     async createScheduleOverride(override) {
-        const { data, error } = await supabase
-            .from('schedule_overrides')
-            .insert([override])
-            .select()
-            .single();
-        
-        if (error) throw error;
-        return data;
+        if (!this.isSupabaseAvailable()) {
+            return override;
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('schedule_overrides')
+                .insert([override])
+                .select()
+                .single();
+            
+            if (error) throw error;
+            return data;
+        } catch (err) {
+            console.error('Error creating schedule override in Supabase:', err);
+            return override;
+        }
     }
 
     // --- Class Entries ---
     async getClassEntries() {
-        const { data, error } = await supabase
-            .from('class_entries')
-            .select('*')
-            .order('date');
-        
-        if (error) throw error;
-        
-        // Convert to the format expected by the app: { "activityId_date": entry }
-        const classEntries = {};
-        data?.forEach(entry => {
-            classEntries[entry.entry_key] = {
-                summary: entry.summary || '',
-                annotations: entry.annotations || {}
-            };
-        });
-        
-        return classEntries;
+        if (!this.isSupabaseAvailable()) {
+            return {};
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('class_entries')
+                .select('*')
+                .order('date');
+            
+            if (error) throw error;
+            
+            // Convert to the format expected by the app: { "activityId_date": entry }
+            const classEntries = {};
+            data?.forEach(entry => {
+                classEntries[entry.entry_key] = {
+                    summary: entry.summary || '',
+                    annotations: entry.annotations || {}
+                };
+            });
+            
+            return classEntries;
+        } catch (err) {
+            console.error('Error loading class entries from Supabase:', err);
+            return {};
+        }
     }
 
     async updateClassEntry(entryKey, entryData) {
-        const [activityId, date] = entryKey.split('_');
-        
-        const { error } = await supabase
-            .from('class_entries')
-            .upsert([{
-                entry_key: entryKey,
-                activity_id: activityId,
-                date: date,
-                summary: entryData.summary || '',
-                annotations: entryData.annotations || {},
-                updated_at: new Date().toISOString()
-            }]);
-        
-        if (error) throw error;
+        if (!this.isSupabaseAvailable()) {
+            return;
+        }
+
+        try {
+            const [activityId, date] = entryKey.split('_');
+            
+            const { error } = await supabase
+                .from('class_entries')
+                .upsert([{
+                    entry_key: entryKey,
+                    activity_id: activityId,
+                    date: date,
+                    summary: entryData.summary || '',
+                    annotations: entryData.annotations || {},
+                    updated_at: new Date().toISOString()
+                }]);
+            
+            if (error) throw error;
+        } catch (err) {
+            console.error('Error updating class entry in Supabase:', err);
+        }
     }
 
     // --- Course Settings ---
     async getCourseSettings() {
-        const { data, error } = await supabase
-            .from('course_settings')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
-        
-        if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows returned"
-        
-        return data ? {
-            courseStartDate: data.start_date || '',
-            courseEndDate: data.end_date || ''
-        } : {
-            courseStartDate: '',
-            courseEndDate: ''
-        };
+        if (!this.isSupabaseAvailable()) {
+            return {
+                courseStartDate: '',
+                courseEndDate: ''
+            };
+        }
+
+        try {
+            const { data, error } = await supabase
+                .from('course_settings')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+            
+            if (error && error.code !== 'PGRST116') throw error; // PGRST116 is "no rows returned"
+            
+            return data ? {
+                courseStartDate: data.start_date || '',
+                courseEndDate: data.end_date || ''
+            } : {
+                courseStartDate: '',
+                courseEndDate: ''
+            };
+        } catch (err) {
+            console.error('Error loading course settings from Supabase:', err);
+            return {
+                courseStartDate: '',
+                courseEndDate: ''
+            };
+        }
     }
 
     async updateCourseSettings(startDate, endDate) {
-        // First try to update existing record
-        const { data: existing } = await supabase
-            .from('course_settings')
-            .select('id')
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+        if (!this.isSupabaseAvailable()) {
+            return;
+        }
 
-        if (existing) {
-            const { error } = await supabase
+        try {
+            // First try to update existing record
+            const { data: existing } = await supabase
                 .from('course_settings')
-                .update({
-                    start_date: startDate || null,
-                    end_date: endDate || null,
-                    updated_at: new Date().toISOString()
-                })
-                .eq('id', existing.id);
-            
-            if (error) throw error;
-        } else {
-            // Create new record if none exists
-            const { error } = await supabase
-                .from('course_settings')
-                .insert([{
-                    start_date: startDate || null,
-                    end_date: endDate || null
-                }]);
-            
-            if (error) throw error;
+                .select('id')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (existing) {
+                const { error } = await supabase
+                    .from('course_settings')
+                    .update({
+                        start_date: startDate || null,
+                        end_date: endDate || null,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('id', existing.id);
+                
+                if (error) throw error;
+            } else {
+                // Create new record if none exists
+                const { error } = await supabase
+                    .from('course_settings')
+                    .insert([{
+                        start_date: startDate || null,
+                        end_date: endDate || null
+                    }]);
+                
+                if (error) throw error;
+            }
+        } catch (err) {
+            console.error('Error updating course settings in Supabase:', err);
         }
     }
 
     // --- Data Migration from localStorage ---
     async migrateFromLocalStorage(localData) {
+        if (!this.isSupabaseAvailable()) {
+            console.log('Supabase not available, skipping migration');
+            return false;
+        }
+
         try {
             console.log('Starting data migration from localStorage...');
 

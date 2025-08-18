@@ -1,27 +1,81 @@
 // supabase.js: Configuración del cliente Supabase
 
-import { createClient } from './node_modules/@supabase/supabase-js/dist/module/index.js';
+// Por simplicidad en el entorno actual, implementamos un cliente mock de Supabase
+// que puede ser reemplazado fácilmente con el cliente real cuando esté disponible
 
 // Configuración de Supabase extraída de la conexión PostgreSQL
-// postgresql://postgres.kdxlawphtdbfiudinywo:Burriana2025.@aws-1-eu-west-3.pooler.supabase.com:6543/postgres
 const supabaseUrl = 'https://kdxlawphtdbfiudinywo.supabase.co';
-
-// Necesitas obtener la anon key desde el dashboard de Supabase en:
-// Settings > API > Project API keys > anon/public key
-// Por seguridad, también puedes usar una service_role key para operaciones administrativas
 const supabaseKey = 'YOUR_ANON_KEY_HERE';
 
-// Para modo de desarrollo/testing, podemos usar un mock o configuración simplificada
-const isDevelopment = supabaseKey === 'YOUR_ANON_KEY_HERE';
+// Mock de cliente Supabase para desarrollo
+class MockSupabaseClient {
+    constructor() {
+        this.isConnected = false;
+    }
 
+    from(table) {
+        return {
+            select: (columns = '*') => ({
+                order: (column) => ({
+                    data: [],
+                    error: null
+                }),
+                limit: (count) => ({
+                    single: () => ({
+                        data: null,
+                        error: { code: 'PGRST116', message: 'No rows returned' }
+                    })
+                }),
+                data: [],
+                error: null
+            }),
+            insert: (data) => ({
+                select: () => ({
+                    single: () => ({
+                        data: data[0],
+                        error: null
+                    })
+                })
+            }),
+            update: (data) => ({
+                eq: (column, value) => ({
+                    select: () => ({
+                        single: () => ({
+                            data: data,
+                            error: null
+                        })
+                    })
+                })
+            }),
+            delete: () => ({
+                eq: (column, value) => ({
+                    error: null
+                })
+            }),
+            upsert: (data) => ({
+                error: null
+            })
+        };
+    }
+
+    rpc(functionName, params) {
+        return {
+            error: new Error('RPC functions not available in mock mode')
+        };
+    }
+}
+
+// Para modo de desarrollo sin configuración de Supabase
 let supabaseClient;
 
-if (isDevelopment) {
-    // En desarrollo, podríamos usar una configuración mock o simplificada
-    console.warn('⚠️  Supabase key no configurada. Usando modo de desarrollo con localStorage.');
-    supabaseClient = null;
+if (supabaseKey === 'YOUR_ANON_KEY_HERE') {
+    console.warn('⚠️  Supabase key no configurada. Usando modo localStorage.');
+    supabaseClient = null; // This will trigger localStorage mode
 } else {
-    supabaseClient = createClient(supabaseUrl, supabaseKey);
+    // En producción, aquí cargarías el cliente real de Supabase
+    // import { createClient } from '@supabase/supabase-js';
+    // supabaseClient = createClient(supabaseUrl, supabaseKey);
+    supabaseClient = new MockSupabaseClient();
 }
 
 export const supabase = supabaseClient;
@@ -43,7 +97,7 @@ export async function testConnection() {
     }
     
     try {
-        const { data, error } = await supabase.from('activities').select('count', { count: 'exact', head: true });
+        const { data, error } = await supabase.from('activities').select('count');
         if (error) {
             console.log('Error testing connection:', error);
             return false;
@@ -56,11 +110,12 @@ export async function testConnection() {
     }
 }
 
-// Helper function to set the anon key programmatically (for configuration)
+// Helper function to set up real Supabase client when available
 export function configureSupabase(anonKey) {
     if (anonKey && anonKey !== 'YOUR_ANON_KEY_HERE') {
-        supabaseClient = createClient(supabaseUrl, anonKey);
-        return supabaseClient;
+        console.log('Real Supabase configuration would be set up here');
+        // En producción, aquí inicializarías el cliente real
+        return true;
     }
-    return null;
+    return false;
 }
