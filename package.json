@@ -1,0 +1,16 @@
+{
+  "name": "cuaderno-profesor",
+  "version": "1.0.0",
+  "description": "Teacher's Dashboard Application with Supabase persistence",
+  "type": "module",
+  "scripts": {
+    "dev": "python3 -m http.server 8080",
+    "build": "echo 'No build step required for this project'"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.39.7"
+  },
+  "keywords": ["teacher", "dashboard", "education", "schedule"],
+  "author": "",
+  "license": "MIT"
+}

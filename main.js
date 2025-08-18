@@ -70,11 +70,27 @@ function handleAction(action, element, event) {
     ];
     
     if (actionHandlers[action]) {
-        actionHandlers[action](id, element, event);
-    }
-
-    if (reRenderActions.includes(action)) {
-        render();
+        // Handle async action handlers
+        const result = actionHandlers[action](id, element, event);
+        if (result && typeof result.then === 'function') {
+            // If it's a promise, wait for it and then re-render if needed
+            result.then(() => {
+                if (reRenderActions.includes(action)) {
+                    render();
+                }
+            }).catch(error => {
+                console.error(`Error in action ${action}:`, error);
+                // Still re-render in case of error to show consistent state
+                if (reRenderActions.includes(action)) {
+                    render();
+                }
+            });
+        } else {
+            // Synchronous action, re-render immediately if needed
+            if (reRenderActions.includes(action)) {
+                render();
+            }
+        }
     }
 }
 
