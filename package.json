@@ -4,7 +4,7 @@
   "description": "Teacher's Dashboard Application with Supabase persistence",
   "type": "module",
   "scripts": {
-    "dev": "python3 -m http.server 8080",
+    "dev": "node generate-config.js && python3 -m http.server 8080",
     "build": "echo 'No build step required for this project'"
   },
   "dependencies": {

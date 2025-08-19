@@ -14,6 +14,7 @@ const closeSidebarBtn = document.getElementById('close-sidebar-btn');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const mobileHeaderTitle = document.getElementById('mobile-header-title');
 const themeSwitcherBtns = document.querySelectorAll('.theme-switcher');
+const dbIndicator = document.getElementById('db-connection-indicator');
 
 function render() {
     mainContent.innerHTML = '';
@@ -56,6 +57,13 @@ function updateNavButtons() {
         btn.classList.toggle('hover:bg-gray-200', !isActive);
         btn.classList.toggle('dark:hover:bg-gray-700', !isActive);
     });
+}
+
+async function updateDbIndicator() {
+    if (!dbIndicator) return;
+    const ok = await testConnection();
+    dbIndicator.classList.toggle('bg-green-500', ok);
+    dbIndicator.classList.toggle('bg-red-500', !ok);
 }
 
 
@@ -187,6 +195,9 @@ async function init() {
     loadState();
     render();
     updateNavButtons();
+    // Actualiza el indicador de conexión y vuelve a chequear periódicamente
+    updateDbIndicator();
+    setInterval(updateDbIndicator, 30000);
     
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
