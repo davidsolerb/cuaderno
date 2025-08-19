@@ -4,8 +4,8 @@
 // que puede ser reemplazado fácilmente con el cliente real cuando esté disponible
 
 // Configuración de Supabase extraída de la conexión PostgreSQL
-const supabaseUrl = 'https://kdxlawphtdbfiudinywo.supabase.co';
-const supabaseKey = 'YOUR_ANON_KEY_HERE';
+const supabaseUrl = SUPABASE_URL;
+const supabaseKey = SUPABASE_ANON_KEY;
 
 // Mock de cliente Supabase para desarrollo
 class MockSupabaseClient {
@@ -112,7 +112,7 @@ export async function testConnection() {
 
 // Helper function to set up real Supabase client when available
 export function configureSupabase(anonKey) {
-    if (anonKey && anonKey !== 'YOUR_ANON_KEY_HERE') {
+    if (anonKey && anonKey !== SUPABASE_ANON_KEY) {
         console.log('Real Supabase configuration would be set up here');
         // En producción, aquí inicializarías el cliente real
         return true;
