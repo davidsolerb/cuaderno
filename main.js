@@ -1,5 +1,6 @@
 // main.js: El punto de entrada principal que une todo.
 
+import { supabase, testConnection } from './supabase.js';
 import { state, loadState } from './state.js';
 import * as views from './views.js';
 import { actionHandlers } from './actions.js';
