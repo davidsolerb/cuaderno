@@ -1,12 +1,12 @@
 // actions.js: Define toda la lógica de las acciones del usuario.
 
-import { state, saveState, getRandomPastelColor } from './state.js';
+import { state, saveState, saveActivity, saveStudent, saveTimeSlot, deleteActivity, deleteStudent, deleteTimeSlot, getRandomPastelColor } from './state.js';
 import { showModal } from './utils.js';
 import { t } from './i18n.js'; // Importamos la función de traducción
 
 export const actionHandlers = {
     // --- Student Actions ---
-    'add-student-to-class': (id, element) => {
+    'add-student-to-class': async (id, element) => {
         const activityId = element.dataset.activityId;
         const nameInput = document.getElementById(`new-student-name-${activityId}`);
         const name = nameInput.value.trim();
@@ -20,16 +20,17 @@ export const actionHandlers = {
         if (!student) {
             student = { id: crypto.randomUUID(), name: name, generalNotes: '' };
             state.students.push(student);
+            await saveStudent(student);
         }
         
         if (!activity.studentIds?.includes(student.id)) {
             activity.studentIds = [...(activity.studentIds || []), student.id];
+            await saveActivity(activity);
         }
         
         nameInput.value = '';
-        saveState();
     },
-    'add-selected-student-to-class': (id, element) => {
+    'add-selected-student-to-class': async (id, element) => {
         const activityId = element.dataset.activityId;
         const activity = state.activities.find(a => a.id === activityId);
         const selectEl = document.getElementById(`add-student-select-${activityId}`);
@@ -37,15 +38,15 @@ export const actionHandlers = {
 
         if (activity && studentId && !activity.studentIds?.includes(studentId)) {
             activity.studentIds.push(studentId);
-            saveState();
+            await saveActivity(activity);
         }
     },
-    'remove-student-from-class': (id, element) => {
+    'remove-student-from-class': async (id, element) => {
         const { activityId, studentId } = element.dataset;
         const activity = state.activities.find(a => a.id === activityId);
         if (activity) {
             activity.studentIds = activity.studentIds?.filter(sid => sid !== studentId);
-            saveState();
+            await saveActivity(activity);
         }
     },
     'select-student': (id, element) => {
@@ -56,25 +57,25 @@ export const actionHandlers = {
         state.selectedStudentId = null;
         state.activeView = 'classes';
     },
-    'edit-student-name': (id, element) => {
+    'edit-student-name': async (id, element) => {
         const student = state.students.find(s => s.id === element.dataset.studentId);
         if(student) {
             student.name = element.value;
-            saveState();
+            await saveStudent(student);
         }
     },
-    'edit-student-notes': (id, element) => {
+    'edit-student-notes': async (id, element) => {
         const student = state.students.find(s => s.id === element.dataset.studentId);
         if(student) {
             student.generalNotes = element.value;
-            saveState();
+            await saveStudent(student);
         }
     },
-    'edit-session-annotation': (id, element) => {
+    'edit-session-annotation': async (id, element) => {
         const { entryId, studentId } = element.dataset;
         if (state.classEntries[entryId] && state.classEntries[entryId].annotations) {
             state.classEntries[entryId].annotations[studentId] = element.value;
-            saveState();
+            await saveState();
         }
     },
     'export-student-docx': () => {
@@ -174,12 +175,12 @@ export const actionHandlers = {
         });
     },
     // --- Activity Actions ---
-    'add-activity': () => {
+    'add-activity': async () => {
         const nameInput = document.getElementById('new-activity-name');
         const name = nameInput.value.trim();
         const type = document.querySelector('input[name="activityType"]:checked').value;
         if (name) {
-            state.activities.push({ 
+            const newActivity = { 
                 id: crypto.randomUUID(), 
                 name, 
                 type, 
@@ -187,15 +188,15 @@ export const actionHandlers = {
                 color: getRandomPastelColor(),
                 startDate: state.courseStartDate,
                 endDate: state.courseEndDate
-            });
+            };
+            state.activities.push(newActivity);
+            await saveActivity(newActivity);
             nameInput.value = '';
-            saveState();
         }
     },
     'delete-activity': (id) => {
-        showModal(t('delete_activity_confirm_title'), t('delete_activity_confirm_text'), () => {
-            state.activities = state.activities.filter(a => a.id !== id);
-            saveState();
+        showModal(t('delete_activity_confirm_title'), t('delete_activity_confirm_text'), async () => {
+            await deleteActivity(id);
             document.dispatchEvent(new CustomEvent('render'));
         });
     },
@@ -205,7 +206,7 @@ export const actionHandlers = {
     'cancel-edit-activity': () => {
         state.editingActivityId = null;
     },
-    'save-activity': (id) => {
+    'save-activity': async (id) => {
         const activity = state.activities.find(a => a.id === id);
         if (activity) {
             const nameInput = document.getElementById(`edit-activity-name-${id}`);
@@ -218,32 +219,32 @@ export const actionHandlers = {
             }
             activity.startDate = startDateInput.value;
             activity.endDate = endDateInput.value;
-            saveState();
+            await saveActivity(activity);
         }
         state.editingActivityId = null;
     },
-    'change-activity-color': (id, element) => {
+    'change-activity-color': async (id, element) => {
          const activity = state.activities.find(a => a.id === id);
          if(activity) {
             activity.color = element.value;
-            saveState();
+            await saveActivity(activity);
             document.dispatchEvent(new CustomEvent('render'));
          }
     },
     // --- TimeSlot Actions ---
-    'add-timeslot': () => {
+    'add-timeslot': async () => {
         const labelInput = document.getElementById('new-timeslot-label');
         const label = labelInput.value.trim();
         if (label) {
             const newOrder = state.timeSlots.length > 0 ? Math.max(...state.timeSlots.map(t => t.order)) + 1 : 0;
-            state.timeSlots.push({ id: crypto.randomUUID(), label, order: newOrder });
+            const newTimeSlot = { id: crypto.randomUUID(), label, order: newOrder };
+            state.timeSlots.push(newTimeSlot);
+            await saveTimeSlot(newTimeSlot);
             labelInput.value = '';
-            saveState();
         }
     },
-    'delete-timeslot': (id) => {
-        state.timeSlots = state.timeSlots.filter(t => t.id !== id);
-        saveState();
+    'delete-timeslot': async (id) => {
+        await deleteTimeSlot(id);
     },
     'edit-timeslot': (id) => {
         state.editingTimeSlotId = id;
