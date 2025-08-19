@@ -1,121 +1,60 @@
-// supabase.js: Configuración del cliente Supabase
+// supabase.js — ESM puro para proyectos sin bundler (GitHub Pages friendly)
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// Por simplicidad en el entorno actual, implementamos un cliente mock de Supabase
-// que puede ser reemplazado fácilmente con el cliente real cuando esté disponible
+// Config inyectada en runtime (ver config.js más abajo)
+const CFG = (window.__APP_CONFIG__ ?? {});
+const supabaseUrl = CFG.SUPABASE_URL;
+const supabaseKey = CFG.SUPABASE_ANON_KEY;
+const useMock    = Boolean(CFG.USE_MOCK);
 
-// Configuración de Supabase extraída de la conexión PostgreSQL
-const supabaseUrl = SUPABASE_URL;
-const supabaseKey = SUPABASE_ANON_KEY;
-
-// Mock de cliente Supabase para desarrollo
+// ---- Mock opcional de desarrollo (si USE_MOCK = true) ----
 class MockSupabaseClient {
-    constructor() {
-        this.isConnected = false;
-    }
-
-    from(table) {
-        return {
-            select: (columns = '*') => ({
-                order: (column) => ({
-                    data: [],
-                    error: null
-                }),
-                limit: (count) => ({
-                    single: () => ({
-                        data: null,
-                        error: { code: 'PGRST116', message: 'No rows returned' }
-                    })
-                }),
-                data: [],
-                error: null
-            }),
-            insert: (data) => ({
-                select: () => ({
-                    single: () => ({
-                        data: data[0],
-                        error: null
-                    })
-                })
-            }),
-            update: (data) => ({
-                eq: (column, value) => ({
-                    select: () => ({
-                        single: () => ({
-                            data: data,
-                            error: null
-                        })
-                    })
-                })
-            }),
-            delete: () => ({
-                eq: (column, value) => ({
-                    error: null
-                })
-            }),
-            upsert: (data) => ({
-                error: null
-            })
-        };
-    }
-
-    rpc(functionName, params) {
-        return {
-            error: new Error('RPC functions not available in mock mode')
-        };
-    }
+  from() {
+    return {
+      select: () => ({ data: [], error: null, count: 0 }),
+      insert: (rows) => ({ data: rows, error: null }),
+      update: (rows) => ({ data: rows, error: null }),
+      delete: () => ({ data: null, error: null }),
+      upsert: (rows) => ({ data: rows, error: null }),
+      order: () => ({ data: [], error: null }),
+      limit: () => ({ data: [], error: null }),
+    };
+  }
+  rpc() { return { data: null, error: new Error("mock: no RPC") }; }
 }
 
-// Para modo de desarrollo sin configuración de Supabase
-let supabaseClient;
+// ---- Cliente real o mock, según config ----
+let supabase = null;
 
-if (supabaseKey === 'YOUR_ANON_KEY_HERE') {
-    console.warn('⚠️  Supabase key no configurada. Usando modo localStorage.');
-    supabaseClient = null; // This will trigger localStorage mode
+if (useMock) {
+  console.warn("🧪 Supabase en modo MOCK (USE_MOCK=true).");
+  supabase = new MockSupabaseClient();
+} else if (!supabaseUrl || !supabaseKey) {
+  console.warn("⚠️ Falta SUPABASE_URL o SUPABASE_ANON_KEY. Define window.__APP_CONFIG__.");
+  // supabase queda en null; tu app puede caer a localStorage si quieres.
 } else {
-    // En producción, aquí cargarías el cliente real de Supabase
-    // import { createClient } from '@supabase/supabase-js';
-    // supabaseClient = createClient(supabaseUrl, supabaseKey);
-    supabaseClient = new MockSupabaseClient();
+  supabase = createClient(supabaseUrl, supabaseKey, {
+    auth: { persistSession: true, autoRefreshToken: true },
+  });
 }
 
-export const supabase = supabaseClient;
+export { supabase };
 
-// Para desarrollo, también proporcionamos la conexión PostgreSQL directa
-export const pgConfig = {
-    host: 'aws-1-eu-west-3.pooler.supabase.com',
-    port: 6543,
-    database: 'postgres',
-    user: 'postgres.kdxlawphtdbfiudinywo',
-    password: 'Burriana2025.'
-};
-
-// Función para verificar la conexión
+// Pequeño sanity check
 export async function testConnection() {
-    if (!supabase) {
-        console.log('Supabase not configured, using localStorage mode');
-        return false;
+  if (!supabase) return false;
+  try {
+    // Cuenta filas sin traer datos
+    const { error, count } = await supabase
+      .from("activities")
+      .select("*", { count: "exact", head: true });
+    if (error) {
+      console.error("Supabase error:", error);
+      return false;
     }
-    
-    try {
-        const { data, error } = await supabase.from('activities').select('count');
-        if (error) {
-            console.log('Error testing connection:', error);
-            return false;
-        }
-        console.log('Supabase connection successful');
-        return true;
-    } catch (err) {
-        console.log('Connection test failed:', err);
-        return false;
-    }
-}
-
-// Helper function to set up real Supabase client when available
-export function configureSupabase(anonKey) {
-    if (anonKey && anonKey !== SUPABASE_ANON_KEY) {
-        console.log('Real Supabase configuration would be set up here');
-        // En producción, aquí inicializarías el cliente real
-        return true;
-    }
+    return typeof count === "number";
+  } catch (e) {
+    console.error("Connection test failed:", e);
     return false;
+  }
 }
