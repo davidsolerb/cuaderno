@@ -176,3 +176,12 @@ npm run dev
 2. **Con configuración**: Proporciona sincronización en la nube
 3. **Migración**: Los datos existentes se migran automáticamente la primera vez
 4. **Seguridad**: En producción, configurar políticas RLS adecuadas
+5. **Desarrollo local**: Si no hay `config.js`, la app crea uno automáticamente que usa localStorage
+
+### Solución de Problemas
+
+**Error "Invalid URL" al cargar la aplicación:**
+- Esto ocurre cuando falta el archivo `config.js` o las credenciales de Supabase están vacías
+- **Solución**: La aplicación ahora maneja este caso automáticamente y usa localStorage como respaldo
+- Para desarrollo local, se crea automáticamente un `config.js` que permite que la app funcione
+- En producción, el workflow de GitHub Pages genera el `config.js` con los secrets del repositorio

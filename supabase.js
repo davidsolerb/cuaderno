@@ -29,13 +29,22 @@ let supabase = null;
 if (useMock) {
   console.warn("🧪 Supabase en modo MOCK (USE_MOCK=true).");
   supabase = new MockSupabaseClient();
-} else if (!supabaseUrl || !supabaseKey) {
+} else if (!supabaseUrl || !supabaseKey || supabaseUrl.trim() === "" || supabaseKey.trim() === "") {
   console.warn("⚠️ Falta SUPABASE_URL o SUPABASE_ANON_KEY. Define window.__APP_CONFIG__.");
+  console.warn("⚠️ Configuración actual:", { SUPABASE_URL: supabaseUrl, SUPABASE_ANON_KEY: supabaseKey ? "[SET]" : "[NOT SET]" });
+  console.warn("⚠️ La aplicación funcionará solo con localStorage.");
   // supabase queda en null; tu app puede caer a localStorage si quieres.
 } else {
-  supabase = createClient(supabaseUrl, supabaseKey, {
-    auth: { persistSession: true, autoRefreshToken: true },
-  });
+  try {
+    supabase = createClient(supabaseUrl, supabaseKey, {
+      auth: { persistSession: true, autoRefreshToken: true },
+    });
+    console.log("✅ Supabase cliente inicializado correctamente");
+  } catch (error) {
+    console.error("❌ Error al inicializar Supabase:", error);
+    console.warn("⚠️ La aplicación funcionará solo con localStorage.");
+    supabase = null;
+  }
 }
 
 export { supabase };
