@@ -160,6 +160,30 @@ export function renderScheduleView() {
                     </button>
                  </div>
             </div>
+            
+            <!-- Storage Mode Indicator -->
+            <div id="storage-mode-indicator" class="mb-4 p-3 rounded-lg border-2 ${state.isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'}">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="${state.isOnline ? 'cloud' : 'hard-drive'}" class="w-5 h-5 ${state.isOnline ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}"></i>
+                            <span class="font-semibold ${state.isOnline ? 'text-green-800 dark:text-green-200' : 'text-orange-800 dark:text-orange-200'}">
+                                ${state.isOnline ? t('storage_mode_cloud') : t('storage_mode_local')}
+                            </span>
+                        </div>
+                        <span class="text-sm ${state.isOnline ? 'text-green-600 dark:text-green-400' : 'text-orange-600 dark:text-orange-400'}">
+                            ${state.isOnline ? t('storage_mode_cloud_desc') : t('storage_mode_local_desc')}
+                        </span>
+                    </div>
+                    ${!state.isOnline ? `
+                        <button data-action="export-data" class="bg-orange-600 text-white px-3 py-1.5 rounded-md hover:bg-orange-700 flex items-center gap-2 text-sm">
+                            <i data-lucide="download" class="w-4 h-4"></i>
+                            <span>${t('download_backup')}</span>
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+            
              <div class="flex justify-between items-center mb-4">
                 <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><i data-lucide="chevron-left"></i></button>
                 <span class="font-semibold text-center text-lg">${getWeekDateRange(state.currentDate)}</span>
