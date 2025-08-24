@@ -88,11 +88,10 @@ export class DatabaseService {
         try {
             const { data, error } = await supabase
                 .from('activities')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .eq('id', id)
+                .upsert([{ ...updates, id, updated_at: new Date().toISOString() }])
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         } catch (err) {
@@ -166,11 +165,10 @@ export class DatabaseService {
         try {
             const { data, error } = await supabase
                 .from('students')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .eq('id', id)
+                .upsert([{ ...updates, id, updated_at: new Date().toISOString() }])
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         } catch (err) {
@@ -244,11 +242,10 @@ export class DatabaseService {
         try {
             const { data, error } = await supabase
                 .from('time_slots')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .eq('id', id)
+                .upsert([{ ...updates, id, updated_at: new Date().toISOString() }])
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         } catch (err) {
