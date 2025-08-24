@@ -6,6 +6,13 @@
   <title>Cuaderno del Profesor</title>
 
   <!-- UI libs -->
+  <script>
+    tailwind.config = { darkMode: 'class' };
+    const storedTheme = localStorage.getItem('theme');
+    if (storedTheme === 'dark' || (!storedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+      document.documentElement.classList.add('dark');
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,7 +20,7 @@
   <script src="https://unpkg.com/lucide@latest"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
-<body class="bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
   <div id="offline-banner" class="hidden bg-orange-600 text-white text-center py-2">
     Trabajando sin conexión. Los cambios se guardarán localmente.
   </div>
@@ -28,7 +35,7 @@
     </div>
   </div>
 
-  <div class="flex h-screen sm:h-auto">
+  <div class="flex min-h-screen sm:h-auto">
     <!-- Sidebar -->
     <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform -translate-x-full sm:relative sm:translate-x-0 transition-transform duration-300 ease-in-out">
       <div class="flex flex-col h-full">

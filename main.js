@@ -44,6 +44,14 @@ function render() {
     updateMobileHeader();
     lucide.createIcons();
     attachEventListeners();
+
+    const storageIndicator = document.getElementById('storage-mode-indicator');
+    if (storageIndicator && state.isOnline) {
+        setTimeout(() => {
+            storageIndicator.classList.add('opacity-0');
+            setTimeout(() => storageIndicator.classList.add('hidden'), 500);
+        }, 3000);
+    }
 }
 
 function updateMobileHeader() {

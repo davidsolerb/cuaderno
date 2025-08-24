@@ -162,7 +162,7 @@ export function renderScheduleView() {
             </div>
             
             <!-- Storage Mode Indicator -->
-            <div id="storage-mode-indicator" class="mb-4 p-3 rounded-lg border-2 ${state.isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'}">
+            <div id="storage-mode-indicator" class="mb-4 p-3 rounded-lg border-2 transition-opacity duration-500 ${state.isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'}">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="flex items-center gap-2">
