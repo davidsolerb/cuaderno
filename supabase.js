@@ -51,19 +51,19 @@ export { supabase };
 
 // Pequeño sanity check
 export async function testConnection() {
-  if (!supabase) return false;
+  if (!supabase) {
+    return { ok: false, error: new Error("Supabase no está configurado") };
+  }
   try {
     // Cuenta filas sin traer datos
     const { error, count } = await supabase
       .from("activities")
       .select("*", { count: "exact", head: true });
     if (error) {
-      console.error("Supabase error:", error);
-      return false;
+      return { ok: false, error };
     }
-    return typeof count === "number";
+    return { ok: typeof count === "number" };
   } catch (e) {
-    console.error("Connection test failed:", e);
-    return false;
+    return { ok: false, error: e };
   }
 }
