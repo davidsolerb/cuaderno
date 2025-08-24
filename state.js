@@ -1,6 +1,7 @@
 // state.js: Gestiona el estado global y la persistencia de datos con Supabase.
 
 import { db } from './database.js';
+import { t } from './i18n.js';
 
 const pastelColors = ['#FFADAD', '#FFD6A5', '#FDFFB6', '#CAFFBF', '#9BF6FF', '#A0C4FF', '#BDB2FF', '#FFC6FF'];
 
@@ -36,20 +37,21 @@ export function getRandomPastelColor() {
 }
 
 let saveTimeout;
+let debounceTimeout;
 let savingIndicator = false;
 
 // Función para mostrar el indicador de guardado
-function showSaveIndicator() {
-    if (savingIndicator) return;
+function showSaveIndicator(status = 'saving') {
     savingIndicator = true;
-    
     const indicator = document.getElementById('save-indicator');
     if (indicator) {
+        const textEl = indicator.querySelector('span');
+        if (textEl) {
+            textEl.textContent = status === 'saved' ? t('save_indicator') : t('saving_indicator');
+        }
         indicator.classList.add('show');
         if (window.lucide) {
-            lucide.createIcons({
-                nodes: [indicator.querySelector('i')]
-            });
+            lucide.createIcons({ nodes: [indicator.querySelector('i')] });
         }
     }
 }
@@ -63,13 +65,22 @@ function hideSaveIndicator() {
     }
 }
 
+export function scheduleSaveState() {
+    if (debounceTimeout) clearTimeout(debounceTimeout);
+    showSaveIndicator('saving');
+    debounceTimeout = setTimeout(() => {
+        debounceTimeout = null;
+        saveState();
+    }, 2000);
+}
+
 // Función para guardar el estado completo en Supabase
 export async function saveState() {
     if (state.isLoading) return; // No guardar mientras se está cargando
     
     try {
-        showSaveIndicator();
-        
+        showSaveIndicator('saving');
+
         // Preparar datos para guardar
         const savePromises = [];
         
@@ -111,7 +122,7 @@ export async function saveState() {
         
         // Ejecutar todas las operaciones de guardado
         await Promise.all(savePromises);
-        
+
         // También mantener en localStorage como respaldo
         const dataToSave = {
             activities: state.activities,
@@ -127,6 +138,7 @@ export async function saveState() {
         
         // Ocultar indicador después de un delay
         clearTimeout(saveTimeout);
+        showSaveIndicator('saved');
         saveTimeout = setTimeout(() => {
             hideSaveIndicator();
         }, 1500);

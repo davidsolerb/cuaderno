@@ -409,14 +409,17 @@ export class DatabaseService {
             
             const { error } = await supabase
                 .from('class_entries')
-                .upsert([{
-                    entry_key: entryKey,
-                    activity_id: activityId,
-                    date: date,
-                    summary: entryData.summary || '',
-                    annotations: entryData.annotations || {},
-                    updated_at: new Date().toISOString()
-                }]);
+                .upsert(
+                    [{
+                        entry_key: entryKey,
+                        activity_id: activityId,
+                        date: date,
+                        summary: entryData.summary || '',
+                        annotations: entryData.annotations || {},
+                        updated_at: new Date().toISOString()
+                    }],
+                    { onConflict: 'entry_key' }
+                );
             
             if (error) throw error;
         } catch (err) {
