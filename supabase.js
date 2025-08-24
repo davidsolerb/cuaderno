@@ -25,6 +25,7 @@ class MockSupabaseClient {
 
 // ---- Cliente real o mock, según config ----
 let supabase = null;
+let initError = null;
 
 if (useMock) {
   console.warn("🧪 Supabase en modo MOCK (USE_MOCK=true).");
@@ -36,11 +37,16 @@ if (useMock) {
   // supabase queda en null; tu app puede caer a localStorage si quieres.
 } else {
   try {
-    supabase = createClient(supabaseUrl, supabaseKey, {
+    const url = /^https?:\/\//i.test(supabaseUrl) ? supabaseUrl : `https://${supabaseUrl}`;
+    if (url !== supabaseUrl) {
+      console.warn("⚠️ SUPABASE_URL sin protocolo, asumiendo https://");
+    }
+    supabase = createClient(url, supabaseKey, {
       auth: { persistSession: true, autoRefreshToken: true },
     });
     console.log("✅ Supabase cliente inicializado correctamente");
   } catch (error) {
+    initError = error;
     console.error("❌ Error al inicializar Supabase:", error);
     console.warn("⚠️ La aplicación funcionará solo con localStorage.");
     supabase = null;
@@ -51,19 +57,19 @@ export { supabase };
 
 // Pequeño sanity check
 export async function testConnection() {
-  if (!supabase) return false;
+  if (!supabase) {
+    return { ok: false, error: initError || new Error("Supabase no está configurado") };
+  }
   try {
     // Cuenta filas sin traer datos
     const { error, count } = await supabase
       .from("activities")
       .select("*", { count: "exact", head: true });
     if (error) {
-      console.error("Supabase error:", error);
-      return false;
+      return { ok: false, error };
     }
-    return typeof count === "number";
+    return { ok: typeof count === "number" };
   } catch (e) {
-    console.error("Connection test failed:", e);
-    return false;
+    return { ok: false, error: e };
   }
 }

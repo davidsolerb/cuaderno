@@ -190,6 +190,14 @@ async function init() {
         `;
         document.head.appendChild(script);
     }
+
+    const conn = await testConnection();
+    if (conn.ok) {
+        console.log('☁️ Supabase conectado. Modo nube activo.');
+    } else {
+        console.error('⚠️ No se pudo conectar a Supabase:', conn.error);
+    }
+    state.isOnline = conn.ok;
     
     const savedTheme = localStorage.getItem('theme') || 'system';
     setTheme(savedTheme);
