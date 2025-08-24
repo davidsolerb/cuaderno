@@ -1,7 +1,7 @@
 // main.js: El punto de entrada principal que une todo.
 
 import { supabase, testConnection } from './supabase.js';
-import { state, loadState } from './state.js';
+import { state, loadState, setOnlineStatus } from './state.js';
 import * as views from './views.js';
 import { actionHandlers } from './actions.js';
 import { initI18n, t } from './i18n.js';
@@ -14,6 +14,18 @@ const closeSidebarBtn = document.getElementById('close-sidebar-btn');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const mobileHeaderTitle = document.getElementById('mobile-header-title');
 const themeSwitcherBtns = document.querySelectorAll('.theme-switcher');
+const offlineBanner = document.getElementById('offline-banner');
+
+function updateConnectionBanner() {
+    if (!offlineBanner) return;
+    if (state.isOnline) {
+        offlineBanner.classList.add('hidden');
+    } else {
+        offlineBanner.classList.remove('hidden');
+    }
+}
+
+document.addEventListener('online-status', updateConnectionBanner);
 
 function render() {
     mainContent.innerHTML = '';
@@ -197,7 +209,7 @@ async function init() {
     } else {
         console.error('⚠️ No se pudo conectar a Supabase:', conn.error);
     }
-    state.isOnline = conn.ok;
+    setOnlineStatus(conn.ok);
     
     const savedTheme = localStorage.getItem('theme') || 'system';
     setTheme(savedTheme);

@@ -24,6 +24,11 @@ export const state = {
     isOnline: true,
 };
 
+export function setOnlineStatus(isOnline) {
+    state.isOnline = isOnline;
+    document.dispatchEvent(new CustomEvent('online-status', { detail: isOnline }));
+}
+
 export function getRandomPastelColor() {
     const usedColors = state.activities.map(a => a.color);
     const availableColors = pastelColors.filter(c => !usedColors.includes(c));
@@ -142,7 +147,7 @@ export async function saveState() {
             courseEndDate: state.courseEndDate,
         };
         localStorage.setItem('teacherDashboardData', JSON.stringify(dataToSave));
-        state.isOnline = false;
+        setOnlineStatus(false);
     }
 }
 
@@ -183,7 +188,7 @@ export async function loadState() {
         state.classEntries = classEntries || {};
         state.courseStartDate = courseSettings.courseStartDate || '';
         state.courseEndDate = courseSettings.courseEndDate || '';
-        state.isOnline = true;
+        setOnlineStatus(true);
         
         console.log('State loaded from Supabase successfully');
         
@@ -196,7 +201,7 @@ export async function loadState() {
         
     } catch (error) {
         console.error('Error loading from Supabase:', error);
-        state.isOnline = false;
+        setOnlineStatus(false);
         
         // Fallback: cargar desde localStorage
         await loadFromLocalStorage();
