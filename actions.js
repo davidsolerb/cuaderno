@@ -1,7 +1,7 @@
 // actions.js: Define toda la lógica de las acciones del usuario.
 
 import { state, saveState, saveActivity, saveStudent, saveTimeSlot, deleteActivity, deleteStudent, deleteTimeSlot, getRandomPastelColor } from './state.js';
-import { showModal } from './utils.js';
+import { showModal, showTemporaryMessage } from './utils.js';
 import { t } from './i18n.js'; // Importamos la función de traducción
 
 export const actionHandlers = {
@@ -466,6 +466,11 @@ export const actionHandlers = {
         a.download = `cuaderno-profesor-backup-${new Date().toISOString().split('T')[0]}.json`;
         a.click();
         URL.revokeObjectURL(url);
+        
+        // Show success message if in localStorage mode
+        if (!state.isOnline) {
+            showTemporaryMessage(t('backup_downloaded'));
+        }
     },
     'import-data': (id, element, event) => {
         const file = event.target.files[0];

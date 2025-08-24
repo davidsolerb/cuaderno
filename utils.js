@@ -113,3 +113,39 @@ export function showModal(title, content, onConfirm) {
     document.getElementById('modal-cancel').onclick = close;
     modalCloseBtn.onclick = close;
 }
+
+export function showTemporaryMessage(message, duration = 3000) {
+    // Create temporary message element
+    const messageEl = document.createElement('div');
+    messageEl.className = 'fixed top-20 right-4 bg-green-500 text-white px-4 py-2 rounded-md shadow-lg z-50 transform transition-all duration-300 translate-x-full';
+    messageEl.innerHTML = `
+        <div class="flex items-center gap-2">
+            <i data-lucide="check-circle" class="w-4 h-4"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(messageEl);
+    
+    // Initialize lucide icons for the new element
+    if (window.lucide) {
+        lucide.createIcons({
+            nodes: [messageEl.querySelector('i')]
+        });
+    }
+    
+    // Animate in
+    setTimeout(() => {
+        messageEl.classList.remove('translate-x-full');
+    }, 100);
+    
+    // Animate out and remove
+    setTimeout(() => {
+        messageEl.classList.add('translate-x-full');
+        setTimeout(() => {
+            if (messageEl.parentNode) {
+                messageEl.parentNode.removeChild(messageEl);
+            }
+        }, 300);
+    }, duration);
+}

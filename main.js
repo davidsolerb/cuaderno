@@ -67,7 +67,8 @@ function handleAction(action, element, event) {
         'select-activity', 'back-to-schedule', 'generate-schedule-slots', 'edit-timeslot',
         'save-timeslot', 'cancel-edit-timeslot', 'edit-activity', 'save-activity',
         'cancel-edit-activity', 'prev-week', 'next-week', 'today', 'select-student', 'back-to-classes',
-        'add-selected-student-to-class', 'navigate-to-session', 'add-schedule-override', 'delete-schedule-override'
+        'add-selected-student-to-class', 'navigate-to-session', 'add-schedule-override', 'delete-schedule-override',
+        'export-data', 'import-data'
     ];
     
     if (actionHandlers[action]) {
@@ -176,6 +177,20 @@ function updateThemeSwitcherUI(theme) {
 
 
 async function init() {
+    // Create config.js if missing (for local development)
+    if (!window.__APP_CONFIG__) {
+        console.log('No config found, creating fallback config.js for localStorage mode');
+        const script = document.createElement('script');
+        script.textContent = `
+            window.__APP_CONFIG__ = {
+                SUPABASE_URL: "",
+                SUPABASE_ANON_KEY: "",
+                USE_MOCK: false
+            };
+        `;
+        document.head.appendChild(script);
+    }
+    
     const savedTheme = localStorage.getItem('theme') || 'system';
     setTheme(savedTheme);
 
@@ -184,7 +199,7 @@ async function init() {
         updateNavButtons();
     }); 
     
-    loadState();
+    await loadState();
     render();
     updateNavButtons();
     
