@@ -59,7 +59,7 @@ export { supabase };
 export async function testConnection() {
   if (!supabase) {
     return { ok: false, error: initError || new Error("Supabase no está configurado") };
-main
+ main
   }
   try {
     // Cuenta filas sin traer datos
