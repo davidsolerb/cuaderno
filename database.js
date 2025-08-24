@@ -2,89 +2,6 @@
 
 import { supabase } from './supabase.js';
 
-// SQL para crear el schema de la base de datos
-const CREATE_TABLES_SQL = `
--- Tabla de configuración del curso
-CREATE TABLE IF NOT EXISTS course_settings (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    start_date DATE,
-    end_date DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabla de actividades/clases
-CREATE TABLE IF NOT EXISTS activities (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name TEXT NOT NULL,
-    type TEXT NOT NULL CHECK (type IN ('class', 'activity')),
-    color TEXT,
-    start_date DATE,
-    end_date DATE,
-    student_ids UUID[] DEFAULT '{}',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabla de estudiantes
-CREATE TABLE IF NOT EXISTS students (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    name TEXT NOT NULL,
-    general_notes TEXT DEFAULT '',
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabla de franjas horarias
-CREATE TABLE IF NOT EXISTS time_slots (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    label TEXT NOT NULL,
-    start_time TIME,
-    end_time TIME,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabla del horario semanal
-CREATE TABLE IF NOT EXISTS schedules (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    day_time_key TEXT NOT NULL UNIQUE, -- e.g., "Monday-09:00-10:00"
-    activity_id UUID REFERENCES activities(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabla de excepciones del horario
-CREATE TABLE IF NOT EXISTS schedule_overrides (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    date DATE NOT NULL,
-    day_time_key TEXT NOT NULL,
-    activity_id UUID REFERENCES activities(id) ON DELETE CASCADE,
-    is_canceled BOOLEAN DEFAULT FALSE,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tabla de entradas de clase (sesiones específicas)
-CREATE TABLE IF NOT EXISTS class_entries (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    entry_key TEXT NOT NULL UNIQUE, -- e.g., "activityId_2024-01-15"
-    activity_id UUID REFERENCES activities(id) ON DELETE CASCADE,
-    date DATE NOT NULL,
-    summary TEXT DEFAULT '',
-    annotations JSONB DEFAULT '{}', -- {studentId: "annotation text"}
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Índices para mejorar rendimiento
-CREATE INDEX IF NOT EXISTS idx_activities_type ON activities(type);
-CREATE INDEX IF NOT EXISTS idx_schedules_activity_id ON schedules(activity_id);
-CREATE INDEX IF NOT EXISTS idx_schedule_overrides_date ON schedule_overrides(date);
-CREATE INDEX IF NOT EXISTS idx_class_entries_activity_id ON class_entries(activity_id);
-CREATE INDEX IF NOT EXISTS idx_class_entries_date ON class_entries(date);
-`;
 
 // Servicio de base de datos
 export class DatabaseService {
@@ -98,111 +15,27 @@ export class DatabaseService {
         return this.useSupabase && !!supabase;
     }
 
-    // Inicializar el schema de la base de datos
+    // Inicializar/verificar la disponibilidad del schema de la base de datos
     async initializeSchema() {
         if (!this.isSupabaseAvailable()) {
             console.log('Supabase no disponible, usando localStorage como respaldo');
             this.initialized = true;
-            return true;
+            return false;
         }
 
         try {
-            console.log('Inicializando schema de base de datos...');
-            
-            // Crear las tablas básicas (sin restricciones de FK para evitar errores)
-            const basicTables = [
-                `CREATE TABLE IF NOT EXISTS course_settings (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    start_date DATE,
-                    end_date DATE,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )`,
-                `CREATE TABLE IF NOT EXISTS activities (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    type TEXT NOT NULL,
-                    color TEXT,
-                    start_date DATE,
-                    end_date DATE,
-                    student_ids UUID[] DEFAULT '{}',
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )`,
-                `CREATE TABLE IF NOT EXISTS students (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    name TEXT NOT NULL,
-                    general_notes TEXT DEFAULT '',
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )`,
-                `CREATE TABLE IF NOT EXISTS time_slots (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    label TEXT NOT NULL,
-                    start_time TIME,
-                    end_time TIME,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )`,
-                `CREATE TABLE IF NOT EXISTS schedules (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    day_time_key TEXT NOT NULL UNIQUE,
-                    activity_id UUID,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )`,
-                `CREATE TABLE IF NOT EXISTS schedule_overrides (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    date DATE NOT NULL,
-                    day_time_key TEXT NOT NULL,
-                    activity_id UUID,
-                    is_canceled BOOLEAN DEFAULT FALSE,
-                    notes TEXT,
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )`,
-                `CREATE TABLE IF NOT EXISTS class_entries (
-                    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-                    entry_key TEXT NOT NULL UNIQUE,
-                    activity_id UUID,
-                    date DATE NOT NULL,
-                    summary TEXT DEFAULT '',
-                    annotations JSONB DEFAULT '{}',
-                    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-                    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-                )`
-            ];
-
-            // Intentar crear las tablas usando SQL directo
-            for (const sql of basicTables) {
-                try {
-                    const { error } = await supabase.rpc('exec_sql', { sql });
-                    if (error) {
-                        console.warn('No se pudo crear tabla con RPC, intentando con queries básicos');
-                        // Intentar operaciones básicas para verificar que las tablas existen
-                        await supabase.from(this.getTableNameFromSQL(sql)).select('*').limit(1);
-                    }
-                } catch (err) {
-                    console.warn('Advertencia al crear tabla:', err.message);
-                }
-            }
-            
-            console.log('Schema de base de datos inicializado exitosamente');
+            // Realiza una consulta ligera para comprobar que las tablas existen
+            await supabase.from('activities').select('id').limit(1);
+            console.log('Schema de base de datos verificado (consulta manual necesaria: schema.sql)');
             this.initialized = true;
             return true;
         } catch (err) {
-            console.error('Error al inicializar schema de base de datos:', err);
+            console.error('Error verificando schema de base de datos:', err);
             console.log('Continuando con localStorage como respaldo');
             this.useSupabase = false;
             this.initialized = true;
             return false;
         }
-    }
-
-    // Helper para extraer nombre de tabla del SQL
-    getTableNameFromSQL(sql) {
-        const match = sql.match(/CREATE TABLE IF NOT EXISTS (\w+)/);
-        return match ? match[1] : 'unknown';
     }
 
     // --- CRUD Operations for Activities ---
@@ -255,11 +88,10 @@ export class DatabaseService {
         try {
             const { data, error } = await supabase
                 .from('activities')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .eq('id', id)
+                .upsert([{ ...updates, id, updated_at: new Date().toISOString() }])
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         } catch (err) {
@@ -333,11 +165,10 @@ export class DatabaseService {
         try {
             const { data, error } = await supabase
                 .from('students')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .eq('id', id)
+                .upsert([{ ...updates, id, updated_at: new Date().toISOString() }])
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         } catch (err) {
@@ -411,11 +242,10 @@ export class DatabaseService {
         try {
             const { data, error } = await supabase
                 .from('time_slots')
-                .update({ ...updates, updated_at: new Date().toISOString() })
-                .eq('id', id)
+                .upsert([{ ...updates, id, updated_at: new Date().toISOString() }])
                 .select()
                 .single();
-            
+
             if (error) throw error;
             return data;
         } catch (err) {
