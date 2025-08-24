@@ -1,6 +1,6 @@
 // actions.js: Define toda la lógica de las acciones del usuario.
 
-import { state, saveState, saveActivity, saveStudent, saveTimeSlot, deleteActivity, deleteStudent, deleteTimeSlot, getRandomPastelColor } from './state.js';
+import { state, saveState, scheduleSaveState, saveActivity, saveStudent, saveTimeSlot, deleteActivity, deleteStudent, deleteTimeSlot, getRandomPastelColor } from './state.js';
 import { showModal, showTemporaryMessage } from './utils.js';
 import { t } from './i18n.js'; // Importamos la función de traducción
 
@@ -394,20 +394,20 @@ export const actionHandlers = {
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].planned = element.value;
-        saveState();
+        scheduleSaveState();
     },
     'completed-change': (id, element) => {
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].completed = element.value;
-        saveState();
+        scheduleSaveState();
     },
     'annotation-change': (id, element) => {
         const { studentId } = element.dataset;
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].annotations[studentId] = element.value;
-        saveState();
+        scheduleSaveState();
     },
     // --- Data Management Actions ---
     'update-course-date': (id, element) => {

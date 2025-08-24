@@ -10,6 +10,8 @@
   "storage_mode_local_desc": "Les dades es guarden només en aquest dispositiu",
   "storage_mode_cloud": "Mode Núvol",
   "storage_mode_cloud_desc": "Les dades es sincronitzen al núvol",
+  "saving_indicator": "Desant...",
+  "save_indicator": "Desat",
   "download_backup": "Descarregar Còpia",
   "backup_downloaded": "Còpia de seguretat descarregada",
   "schedule_view_title": "Horari Setmanal",
