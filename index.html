@@ -101,7 +101,32 @@
   <!-- 1) Config de runtime generada en el deploy con repo secrets -->
   <script src="config.js"></script>
 
-  <!-- 2) Tus módulos (main.js puede importar ./supabase.js) -->
-  <script type="module" src="main.js"></script>
+  <!-- 2) Inicialización de autenticación -->
+  <script type="module">
+    import { initAuth } from './auth.js';
+    
+    console.log('🔐 Iniciando sistema de autenticación...');
+    
+    // Verificar autenticación antes de cargar la aplicación principal
+    const isAuthenticated = initAuth();
+    if (isAuthenticated) {
+        console.log('🔐 Usuario ya autenticado, cargando aplicación...');
+        loadMainApp();
+    } else {
+        console.log('🔐 Usuario no autenticado, esperando autenticación...');
+        document.addEventListener('auth-success', () => {
+            console.log('🔐 Autenticación exitosa, cargando aplicación...');
+            loadMainApp();
+        });
+    }
+    
+    function loadMainApp() {
+        // Cargar la aplicación principal dinámicamente después de autenticación
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.src = 'main.js';
+        document.head.appendChild(script);
+    }
+  </script>
 </body>
 </html>

@@ -197,6 +197,8 @@ function updateThemeSwitcherUI(theme) {
 
 
 async function init() {
+    console.log('🚀 Inicializando aplicación principal...');
+    
     // Create config.js if missing (for local development)
     if (!window.__APP_CONFIG__) {
         console.log('No config found, creating fallback config.js for localStorage mode');
@@ -205,29 +207,51 @@ async function init() {
             window.__APP_CONFIG__ = {
                 SUPABASE_URL: "",
                 SUPABASE_ANON_KEY: "",
+                PASSWORD: "",
                 USE_MOCK: false
             };
         `;
         document.head.appendChild(script);
     }
 
-    const conn = await testConnection();
-    if (conn.ok) {
-        console.log('☁️ Supabase conectado. Modo nube activo.');
-    } else {
-        console.error('⚠️ No se pudo conectar a Supabase:', conn.error);
+    // La autenticación ya fue manejada por el script en index.html
+    await initializeApp();
+}
+
+async function initializeApp() {
+    console.log('🚀 Inicializando aplicación principal...');
+    
+    try {
+        const conn = await testConnection();
+        if (conn.ok) {
+            console.log('☁️ Supabase conectado. Modo nube activo.');
+        } else {
+            console.error('⚠️ No se pudo conectar a Supabase:', conn.error);
+        }
+        setOnlineStatus(conn.ok);
+    } catch (error) {
+        console.error('⚠️ Error al probar conexión:', error);
+        setOnlineStatus(false);
     }
-    setOnlineStatus(conn.ok);
     
     const savedTheme = localStorage.getItem('theme') || 'system';
     setTheme(savedTheme);
 
-    await initI18n(() => {
-        render();
-        updateNavButtons();
-    }); 
+    try {
+        await initI18n(() => {
+            render();
+            updateNavButtons();
+        }); 
+    } catch (error) {
+        console.error('⚠️ Error al inicializar i18n:', error);
+    }
     
-    await loadState();
+    try {
+        await loadState();
+    } catch (error) {
+        console.error('⚠️ Error al cargar estado:', error);
+    }
+    
     render();
     updateNavButtons();
     
