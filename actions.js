@@ -380,6 +380,11 @@ export const actionHandlers = {
         const activityInfo = state.activities.find(a => a.id === activityId);
         state.selectedActivity = { ...activityInfo, day, time, date };
     },
+    'navigate-to-session-of-the-day': (id, element) => {
+        const { activityId, day, time, date } = element.dataset;
+        const activityInfo = state.activities.find(a => a.id === activityId);
+        state.selectedActivity = { ...activityInfo, day, time, date };
+    },
     'prev-week': () => {
         state.currentDate.setDate(state.currentDate.getDate() - 7);
     },

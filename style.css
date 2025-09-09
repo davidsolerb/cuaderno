@@ -1,6 +1,54 @@
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+.dark ::-webkit-scrollbar-track {
+    background: #2d3748;
+}
+::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 10px;
+}
+.dark ::-webkit-scrollbar-thumb {
+    background: #555;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+    background: #777;
+}
+
+
 body {
     font-family: 'Inter', sans-serif;
     transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.sidebar-collapsed #sidebar .sidebar-text {
+    display: none;
+}
+
+.sidebar-collapsed #sidebar .nav-button {
+    justify-content: center;
+}
+
+.sidebar-collapsed #sidebar .nav-button i {
+    margin-right: 0;
+}
+
+.sidebar-collapsed #sidebar h1 {
+    display: none;
+}
+
+.sidebar-collapsed #sidebar #sidebar-toggle {
+    justify-content: center;
+    width: 100%;
 }
 
 .animate-fade-in { 

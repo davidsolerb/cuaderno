@@ -90,6 +90,30 @@ export function findPreviousSession(activityId, fromDate) {
     return findSession(activityId, fromDate, 'previous');
 }
 
+export function findNextSessionOfTheDay(activityId, fromDate) {
+    const timeSlots = state.timeSlots;
+    const activity = state.activities.find(a => a.id === activityId);
+    if (!activity) return null;
+
+    const currentDate = new Date(fromDate);
+    const dayOfWeek = (currentDate.getDay() + 6) % 7;
+    const dayKey = DAY_KEYS[dayOfWeek];
+
+    const currentTimeSlot = state.selectedActivity.time;
+    const currentTimeSlotIndex = timeSlots.findIndex(t => t.label === currentTimeSlot);
+
+    if (currentTimeSlotIndex === -1) return null;
+
+    for (let i = currentTimeSlotIndex + 1; i < timeSlots.length; i++) {
+        const time = timeSlots[i];
+        if (state.schedule[`${dayKey}-${time.label}`] === activityId) {
+            return { day: dayKey, time: time.label, date: formatDate(currentDate) };
+        }
+    }
+
+    return null;
+}
+
 export function showModal(title, content, onConfirm) {
     const modalContainer = document.getElementById('modal-container');
     const modalTitle = document.getElementById('modal-title');

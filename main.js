@@ -6,11 +6,13 @@ import * as views from './views.js';
 import { actionHandlers } from './actions.js';
 import { initI18n, t } from './i18n.js';
 
+const appContainer = document.getElementById('app-container');
+const mainContainer = document.getElementById('main-container');
 const mainContent = document.getElementById('main-content');
 const navButtons = document.querySelectorAll('.nav-button');
 const sidebar = document.getElementById('sidebar');
+const sidebarToggleBtn = document.getElementById('sidebar-toggle');
 const openSidebarBtn = document.getElementById('open-sidebar-btn');
-const closeSidebarBtn = document.getElementById('close-sidebar-btn');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const mobileHeaderTitle = document.getElementById('mobile-header-title');
 const themeSwitcherBtns = document.querySelectorAll('.theme-switcher');
@@ -18,11 +20,7 @@ const offlineBanner = document.getElementById('offline-banner');
 
 function updateConnectionBanner() {
     if (!offlineBanner) return;
-    if (state.isOnline) {
-        offlineBanner.classList.add('hidden');
-    } else {
-        offlineBanner.classList.remove('hidden');
-    }
+    offlineBanner.classList.toggle('hidden', state.isOnline);
 }
 
 document.addEventListener('online-status', updateConnectionBanner);
@@ -71,13 +69,15 @@ function updateNavButtons() {
         const isActive = view === state.activeView;
         btn.classList.toggle('bg-blue-600', isActive);
         btn.classList.toggle('text-white', isActive);
-        btn.classList.toggle('text-gray-600', !isActive);
-        btn.classList.toggle('dark:text-gray-300', !isActive);
-        btn.classList.toggle('hover:bg-gray-200', !isActive);
+        btn.classList.toggle('hover:bg-gray-100', !isActive);
         btn.classList.toggle('dark:hover:bg-gray-700', !isActive);
+        if(isActive) {
+            btn.classList.remove('text-gray-600', 'dark:text-gray-300');
+        } else {
+            btn.classList.add('text-gray-600', 'dark:text-gray-300');
+        }
     });
 }
-
 
 function handleAction(action, element, event) {
     const id = element.dataset.id;
@@ -88,51 +88,38 @@ function handleAction(action, element, event) {
         'save-timeslot', 'cancel-edit-timeslot', 'edit-activity', 'save-activity',
         'cancel-edit-activity', 'prev-week', 'next-week', 'today', 'select-student', 'back-to-classes',
         'add-selected-student-to-class', 'navigate-to-session', 'add-schedule-override', 'delete-schedule-override',
-        'export-data', 'import-data'
+        'export-data', 'import-data', 'navigate-to-session-of-the-day'
     ];
     
     if (actionHandlers[action]) {
-        // Handle async action handlers
         const result = actionHandlers[action](id, element, event);
         if (result && typeof result.then === 'function') {
-            // If it's a promise, wait for it and then re-render if needed
             result.then(() => {
-                if (reRenderActions.includes(action)) {
-                    render();
-                }
+                if (reRenderActions.includes(action)) render();
             }).catch(error => {
                 console.error(`Error in action ${action}:`, error);
-                // Still re-render in case of error to show consistent state
-                if (reRenderActions.includes(action)) {
-                    render();
-                }
+                if (reRenderActions.includes(action)) render();
             });
         } else {
-            // Synchronous action, re-render immediately if needed
-            if (reRenderActions.includes(action)) {
-                render();
-            }
+            if (reRenderActions.includes(action)) render();
         }
     }
 }
 
 function attachEventListeners() {
-    const elements = document.querySelectorAll('[data-action]');
-    elements.forEach(el => {
+    document.querySelectorAll('[data-action]').forEach(el => {
+        if (el.dataset.listenerAttached === 'true') return;
+
         const action = el.dataset.action;
         const eventType = ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName) ? 'input' : 'click';
         
-        if (el.dataset.listenerAttached === 'true') return;
-        
-        // --- INICIO DE LA CORRECCIÓN: No se añade listener al label ---
         if (action === 'import-data-mobile') return;
-        // --- FIN DE LA CORRECCIÓN ---
 
         const listener = (e) => {
-             if (el.closest('.nav-button')) {
-                toggleSidebar(false);
+            if (window.innerWidth < 640 && el.closest('.nav-button')) {
+                toggleMobileSidebar(false);
             }
-            handleAction(action, el, e)
+            handleAction(action, el, e);
         };
 
         el.addEventListener(eventType, listener);
@@ -145,83 +132,70 @@ function attachEventListeners() {
         importInput.dataset.listenerAttached = 'true';
     }
     
-    // --- INICIO DE LA CORRECCIÓN: Se añade el listener directamente al input móvil ---
     const mobileImportInput = document.getElementById('import-file-input-mobile');
     if (mobileImportInput && mobileImportInput.dataset.listenerAttached !== 'true') {
         mobileImportInput.addEventListener('change', (e) => handleAction('import-data', mobileImportInput, e));
         mobileImportInput.dataset.listenerAttached = 'true';
     }
-    // --- FIN DE LA CORRECCIÓN ---
 }
 
+function toggleMobileSidebar(show) {
+    sidebar.classList.toggle('-translate-x-full', !show);
+    sidebarOverlay.classList.toggle('hidden', !show);
+}
 
-function toggleSidebar(show) {
-    if (show) {
-        sidebar.classList.remove('-translate-x-full');
-        sidebarOverlay.classList.remove('hidden');
-    } else {
-        sidebar.classList.add('-translate-x-full');
-        sidebarOverlay.classList.add('hidden');
-    }
+function setSidebarState(collapsed) {
+    appContainer.classList.toggle('sidebar-collapsed', collapsed);
+    mainContainer.style.marginLeft = collapsed ? '4.5rem' : '16rem';
+    sidebar.style.width = collapsed ? '4.5rem' : '16rem';
+
+    const toggleIcon = sidebarToggleBtn.querySelector('i');
+    toggleIcon.setAttribute('data-lucide', collapsed ? 'chevrons-right' : 'chevrons-left');
+    lucide.createIcons();
+
+    localStorage.setItem('sidebarCollapsed', collapsed);
+}
+
+function toggleDesktopSidebar() {
+    const isCollapsed = !appContainer.classList.contains('sidebar-collapsed');
+    setSidebarState(isCollapsed);
 }
 
 function setTheme(theme) {
+    localStorage.setItem('theme', theme);
     if (theme === 'system') {
-        localStorage.removeItem('theme');
-        if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        document.documentElement.classList.toggle('dark', window.matchMedia('(prefers-color-scheme: dark)').matches);
     } else {
-        localStorage.setItem('theme', theme);
-        if (theme === 'dark') {
-            document.documentElement.classList.add('dark');
-        } else {
-            document.documentElement.classList.remove('dark');
-        }
+        document.documentElement.classList.toggle('dark', theme === 'dark');
     }
-    updateThemeSwitcherUI(theme);
+    updateThemeSwitcherUI();
 }
 
-function updateThemeSwitcherUI(theme) {
-     themeSwitcherBtns.forEach(btn => {
+function updateThemeSwitcherUI() {
+    const currentTheme = localStorage.getItem('theme') || 'system';
+    themeSwitcherBtns.forEach(btn => {
         const btnTheme = btn.dataset.theme;
-        const isActive = btnTheme === theme;
+        const isActive = btnTheme === currentTheme;
         btn.classList.toggle('bg-blue-600', isActive);
         btn.classList.toggle('text-white', isActive);
-         btn.classList.toggle('text-gray-500', !isActive);
+        btn.classList.toggle('text-gray-500', !isActive);
         btn.classList.toggle('dark:text-gray-400', !isActive);
     });
 }
 
-
 async function init() {
-    // Create config.js if missing (for local development)
     if (!window.__APP_CONFIG__) {
-        console.log('No config found, creating fallback config.js for localStorage mode');
         const script = document.createElement('script');
-        script.textContent = `
-            window.__APP_CONFIG__ = {
-                SUPABASE_URL: "",
-                SUPABASE_ANON_KEY: "",
-                USE_MOCK: false
-            };
-        `;
+        script.textContent = `window.__APP_CONFIG__ = { SUPABASE_URL: "", SUPABASE_ANON_KEY: "", USE_MOCK: false };`;
         document.head.appendChild(script);
     }
 
     const conn = await testConnection();
-    if (conn.ok) {
-        console.log('☁️ Supabase conectado. Modo nube activo.');
-    } else {
-        console.error('⚠️ No se pudo conectar a Supabase:', conn.error);
-    }
     setOnlineStatus(conn.ok);
-    
-    const savedTheme = localStorage.getItem('theme') || 'system';
-    setTheme(savedTheme);
+    console.log(conn.ok ? '☁️ Supabase conectado. Modo nube activo.' : '⚠️ No se pudo conectar a Supabase:', conn.error || '');
 
+    setTheme(localStorage.getItem('theme') || 'system');
+    
     await initI18n(() => {
         render();
         updateNavButtons();
@@ -231,6 +205,7 @@ async function init() {
     render();
     updateNavButtons();
     
+    // Setup event listeners
     navButtons.forEach(btn => {
         btn.addEventListener('click', () => {
             state.activeView = btn.dataset.view;
@@ -239,34 +214,38 @@ async function init() {
             updateNavButtons();
             render();
             if (window.innerWidth < 640) {
-                toggleSidebar(false);
+                toggleMobileSidebar(false);
             }
         });
     });
     
-    openSidebarBtn.addEventListener('click', () => toggleSidebar(true));
-    closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
-    sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+    openSidebarBtn.addEventListener('click', () => toggleMobileSidebar(true));
+    sidebarOverlay.addEventListener('click', () => toggleMobileSidebar(false));
+    sidebarToggleBtn.addEventListener('click', toggleDesktopSidebar);
     
     themeSwitcherBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            setTheme(btn.dataset.theme);
-        });
+        btn.addEventListener('click', () => setTheme(btn.dataset.theme));
     });
 
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
         if (localStorage.getItem('theme') === 'system') {
             setTheme('system');
         }
     });
 
-    document.addEventListener('render', () => render());
+    document.addEventListener('render', render);
+
     window.addEventListener('resize', () => {
-        if (window.innerWidth >= 640) {
-            sidebar.classList.remove('-translate-x-full');
-            sidebarOverlay.classList.add('hidden');
+        if (window.innerWidth < 640) {
+            setSidebarState(false); // Expand sidebar on mobile
         }
     });
+
+    // Initial sidebar state
+    if (window.innerWidth >= 640) {
+        const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+        setSidebarState(isCollapsed);
+    }
 }
 
 init();
