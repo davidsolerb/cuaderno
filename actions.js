@@ -390,24 +390,25 @@ export const actionHandlers = {
         state.currentDate = new Date();
     },
     // --- Class Entry Actions ---
-    'planned-change': (id, element) => {
+    'planned-change': async (id, element) => {
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].planned = element.value;
-        scheduleSaveState();
+        await saveState();
     },
-    'completed-change': (id, element) => {
+    'completed-change': async (id, element) => {
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].completed = element.value;
-        scheduleSaveState();
+        await saveState();
     },
-    'annotation-change': (id, element) => {
+    'annotation-change': async (id, element) => {
         const { studentId } = element.dataset;
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].annotations[studentId] = element.value;
-        scheduleSaveState();
+        // Save immediately to ensure annotations are not lost
+        await saveState();
     },
     // --- Data Management Actions ---
     'update-course-date': (id, element) => {
@@ -419,7 +420,7 @@ export const actionHandlers = {
         }
         saveState();
     },
-    'import-students': () => {
+    'import-students': async () => {
         const targetClassId = document.getElementById('import-target-class').value;
         const studentListTextEl = document.getElementById('student-list-text');
         const studentListText = studentListTextEl.value;
@@ -431,22 +432,29 @@ export const actionHandlers = {
 
         const names = studentListText.trim().split('\n').filter(name => name.trim() !== '');
         
-        names.forEach(name => {
+        // Process each student individually to ensure cloud saving
+        for (const name of names) {
             const trimmedName = name.trim();
-            if(!trimmedName) return;
+            if(!trimmedName) continue;
 
             let student = state.students.find(s => s.name.toLowerCase() === trimmedName.toLowerCase());
             if (!student) {
                 student = { id: crypto.randomUUID(), name: trimmedName, generalNotes: '' };
                 state.students.push(student);
+                // Save new student to cloud storage
+                await saveStudent(student);
             }
             if (!activity.studentIds?.includes(student.id)) {
                 activity.studentIds = [...(activity.studentIds || []), student.id];
             }
-        });
+        }
+        
+        // Save activity changes to cloud storage
+        await saveActivity(activity);
         
         studentListTextEl.value = '';
-        saveState();
+        // Also save general state for any remaining changes
+        await saveState();
     },
     'export-data': () => {
         const dataStr = JSON.stringify({
