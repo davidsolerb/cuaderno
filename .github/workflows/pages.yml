@@ -22,6 +22,7 @@ jobs:
           window.__APP_CONFIG__ = {
             SUPABASE_URL: "${{ secrets.SUPABASE_URL }}",
             SUPABASE_ANON_KEY: "${{ secrets.SUPABASE_ANON_KEY }}",
+            PASSWORD: "${{ secrets.PASSWORD }}",
             USE_MOCK: false
           };
           EOF
