@@ -424,6 +424,7 @@ export class DatabaseService {
             if (error) throw error;
         } catch (err) {
             console.error('Error updating class entry in Supabase:', err);
+            throw err;
         }
     }
 

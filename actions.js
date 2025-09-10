@@ -71,11 +71,11 @@ export const actionHandlers = {
             await saveStudent(student);
         }
     },
-    'edit-session-annotation': async (id, element) => {
+    'edit-session-annotation': (id, element) => {
         const { entryId, studentId } = element.dataset;
         if (state.classEntries[entryId] && state.classEntries[entryId].annotations) {
             state.classEntries[entryId].annotations[studentId] = element.value;
-            await saveState();
+            scheduleSaveState();
         }
     },
     'export-student-docx': () => {
@@ -390,25 +390,25 @@ export const actionHandlers = {
         state.currentDate = new Date();
     },
     // --- Class Entry Actions ---
-    'planned-change': async (id, element) => {
+    'planned-change': (id, element) => {
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].planned = element.value;
-        await saveState();
+        scheduleSaveState();
     },
-    'completed-change': async (id, element) => {
+    'completed-change': (id, element) => {
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].completed = element.value;
-        await saveState();
+        scheduleSaveState();
     },
-    'annotation-change': async (id, element) => {
+    'annotation-change': (id, element) => {
         const { studentId } = element.dataset;
         const entryId = `${state.selectedActivity.id}_${state.selectedActivity.date}`;
         if (!state.classEntries[entryId]) state.classEntries[entryId] = { annotations: {} };
         state.classEntries[entryId].annotations[studentId] = element.value;
         // Save immediately to ensure annotations are not lost
-        await saveState();
+        scheduleSaveState();
     },
     // --- Data Management Actions ---
     'update-course-date': (id, element) => {
