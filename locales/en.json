@@ -50,6 +50,7 @@
   "no_students_assigned": "No students assigned to this class.",
   "previous_session": "Previous session",
   "next_session": "Next session",
+  "next_session_today": "Next of the day",
   "student_notes_placeholder": "Behavior, questions, work...",
   "settings_view_title": "General Settings",
   "course_dates_title": "Academic Year Dates",

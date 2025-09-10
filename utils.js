@@ -90,6 +90,30 @@ export function findPreviousSession(activityId, fromDate) {
     return findSession(activityId, fromDate, 'previous');
 }
 
+export function findNextSessionOfTheDay(activityId, fromDate, fromTime) {
+    const timeSlots = state.timeSlots;
+    const activity = state.activities.find(a => a.id === activityId);
+    if (!activity) return null;
+
+    const fromDateObj = new Date(fromDate);
+    const dayKey = DAY_KEYS[(fromDateObj.getDay() + 6) % 7];
+
+    // Find the index of the current time slot
+    const fromTimeIndex = timeSlots.findIndex(slot => slot.label === fromTime);
+
+    // Iterate through the remaining time slots of the day
+    for (let i = fromTimeIndex + 1; i < timeSlots.length; i++) {
+        const time = timeSlots[i];
+        if (state.schedule[`${dayKey}-${time.label}`] === activityId) {
+            // We found the next session on the same day
+            return { day: dayKey, time: time.label, date: formatDate(fromDateObj) };
+        }
+    }
+
+    // No next session found on the same day
+    return null;
+}
+
 export function showModal(title, content, onConfirm) {
     const modalContainer = document.getElementById('modal-container');
     const modalTitle = document.getElementById('modal-title');
