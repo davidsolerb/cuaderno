@@ -27,6 +27,20 @@ input[type=number] {
     opacity: 1;
 }
 
+/* --- Sidebar --- */
+#app-container.sidebar-collapsed #sidebar {
+    width: 80px;
+}
+#app-container.sidebar-collapsed .sidebar-text {
+    display: none;
+}
+#app-container.sidebar-collapsed .nav-button {
+    justify-content: center;
+}
+#app-container.sidebar-collapsed #desktop-collapse-btn i {
+    transform: rotate(180deg);
+}
+
 /* Estilos de impresión */
 @media print {
     body {

@@ -50,6 +50,7 @@
   "no_students_assigned": "No hay alumnado asignado a esta clase.",
   "previous_session": "Sesión anterior",
   "next_session": "Siguiente sesión",
+  "next_session_today": "Siguiente del día",
   "student_notes_placeholder": "Comportamiento, dudas, trabajo...",
   "settings_view_title": "Configuración General",
   "course_dates_title": "Fechas del Curso Académico",

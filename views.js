@@ -1,7 +1,7 @@
 // views.js: Contiene todas las funciones que generan el HTML de las vistas.
 
 import { state } from './state.js';
-import { darkenColor, getWeekStartDate, getWeekDateRange, formatDate, isSameDate, findNextSession, findPreviousSession, DAY_KEYS } from './utils.js';
+import { darkenColor, getWeekStartDate, getWeekDateRange, formatDate, isSameDate, findNextSession, findPreviousSession, findNextSessionOfTheDay, DAY_KEYS } from './utils.js';
 import { t } from './i18n.js'; // Importamos la función de traducción
 
 function renderMobileHeaderActions(actions) {
@@ -141,28 +141,25 @@ export function renderScheduleView() {
     }).join('');
 
     return `
-        <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50 min-h-full">
-            <div class="hidden sm:flex justify-between items-center mb-6 no-print">
-                 <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">${t('schedule_view_title')}</h2>
-                 <div class="flex items-center gap-2">
-                    <button data-action="export-data" class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center gap-2">
+        <div class="p-4 sm:p-6 lg:p-8 min-h-full">
+            <div class="flex justify-between items-center mb-6 no-print">
+                 <h2 class="text-3xl font-bold text-gray-800 dark:text-gray-200">${t('schedule_view_title')}</h2>
+                 <div class="hidden sm:flex items-center gap-2">
+                    <button data-action="export-data" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2 transition-colors">
                         <i data-lucide="save" class="w-5 h-5"></i> <span>${t('save_file')}</span>
                     </button>
-                    <label class="bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center gap-2 cursor-pointer">
+                    <label class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2 cursor-pointer transition-colors">
                         <i data-lucide="folder-open" class="w-5 h-5"></i> <span>${t('open_file')}</span>
                         <input type="file" id="import-file-input" accept=".json" class="hidden"/>
                     </label>
-                    
-                    <div class="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-2"></div>
-
-                    <button data-action="print-schedule" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
-                        <i data-lucide="printer" class="w-5 h-5"></i> ${t('print')}
+                    <button data-action="print-schedule" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2 transition-colors">
+                        <i data-lucide="printer" class="w-5 h-5"></i> <span>${t('print')}</span>
                     </button>
                  </div>
             </div>
             
             <!-- Storage Mode Indicator -->
-            <div id="storage-mode-indicator" class="mb-4 p-3 rounded-lg border-2 transition-opacity duration-500 ${state.isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/20 dark:border-orange-800'}">
+            <div id="storage-mode-indicator" class="mb-4 p-3 rounded-lg border transition-opacity duration-500 ${state.isOnline ? 'bg-green-50 border-green-200 dark:bg-green-900/30 dark:border-green-800' : 'bg-orange-50 border-orange-200 dark:bg-orange-900/30 dark:border-orange-800'}">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
                         <div class="flex items-center gap-2">
@@ -185,17 +182,19 @@ export function renderScheduleView() {
             </div>
             
              <div class="flex justify-between items-center mb-4">
-                <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><i data-lucide="chevron-left"></i></button>
-                <span class="font-semibold text-center text-lg">${getWeekDateRange(state.currentDate)}</span>
-                <button data-action="next-week" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"><i data-lucide="chevron-right"></i></button>
-                <button data-action="today" class="bg-gray-600 text-white px-3 py-2 text-sm rounded-md hover:bg-gray-700 ml-4">${t('today')}</button>
+                <div class="flex items-center gap-2">
+                    <button data-action="prev-week" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><i data-lucide="chevron-left" class="w-5 h-5"></i></button>
+                    <button data-action="next-week" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"><i data-lucide="chevron-right" class="w-5 h-5"></i></button>
+                    <button data-action="today" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 text-sm rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 ml-2 transition-colors">${t('today')}</button>
+                </div>
+                <span class="font-semibold text-center text-xl text-gray-700 dark:text-gray-300">${getWeekDateRange(state.currentDate)}</span>
             </div>
             <div id="printable-schedule" class="printable-area">
                 <h2 class="text-2xl font-bold text-gray-800 mb-6 hidden print:block text-center">${t('schedule_view_title')} - ${getWeekDateRange(state.currentDate)}</h2>
-                <div class="bg-white dark:bg-gray-800 p-0 sm:p-4 rounded-lg shadow-md overflow-x-auto">
+                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                     <table class="w-full border-collapse text-center">
-                        <thead><tr class="bg-gray-100 dark:bg-gray-900"><th class="p-2 border border-gray-200 dark:border-gray-700 w-24">${t('hour')}</th>${headerCells}</tr></thead>
-                        <tbody>${tableRows.length > 0 ? tableRows : `<tr><td colspan="6" class="p-4 text-gray-500 dark:text-gray-400">${t('add_timeslots_in_settings')}</td></tr>`}</tbody>
+                        <thead><tr class="bg-gray-50 dark:bg-gray-900/50"><th class="p-3 border-b border-gray-200 dark:border-gray-700 w-24 font-semibold">${t('hour')}</th>${headerCells}</tr></thead>
+                        <tbody>${tableRows.length > 0 ? tableRows : `<tr><td colspan="6" class="p-4 text-center text-gray-500 dark:text-gray-400">${t('add_timeslots_in_settings')}</td></tr>`}</tbody>
                     </table>
                 </div>
             </div>
@@ -206,35 +205,38 @@ export function renderClassesView() {
     renderMobileHeaderActions([]);
     const classes = state.activities.filter(a => a.type === 'class');
     if (classes.length === 0) {
-        return `<div class="p-4 sm:p-6"><h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">${t('classes_view_title')}</h2><p class="text-gray-500 dark:text-gray-400">${t('no_classes_created')}</p></div>`;
+        return `<div class="p-4 sm:p-6 lg:p-8"><h2 class="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">${t('classes_view_title')}</h2><p class="text-gray-500 dark:text-gray-400">${t('no_classes_created')}</p></div>`;
     }
 
     const classesHtml = classes.map(c => {
         const studentsOfClass = state.students.filter(s => c.studentIds?.includes(s.id));
         const studentsHtml = studentsOfClass.map(s => `
-            <div class="flex justify-between items-center p-2 bg-gray-100 dark:bg-gray-700 rounded-md">
+            <div class="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
                 <button data-action="select-student" data-student-id="${s.id}" class="text-left font-medium text-blue-600 dark:text-blue-400 hover:underline flex-grow">${s.name}</button>
-                <button data-action="remove-student-from-class" data-activity-id="${c.id}" data-student-id="${s.id}" class="text-red-500 hover:text-red-700 ml-4 flex-shrink-0"><i data-lucide="x" class="w-4 h-4"></i></button>
+                <button data-action="remove-student-from-class" data-activity-id="${c.id}" data-student-id="${s.id}" class="text-red-500 hover:text-red-700 ml-4 flex-shrink-0 p-1 rounded-full hover:bg-red-100 dark:hover:bg-red-900/50 transition-colors"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
         `).join('');
 
         return `
-        <div class="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md">
-            <h3 class="text-xl font-bold mb-4" style="color: ${darkenColor(c.color, 40)}">${c.name}</h3>
-            <div class="space-y-2 mb-4">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+            <h3 class="text-2xl font-bold mb-4 flex items-center gap-3">
+                <span class="w-4 h-4 rounded-full" style="background-color: ${c.color};"></span>
+                <span>${c.name}</span>
+            </h3>
+            <div class="space-y-3 mb-6">
                 ${studentsHtml || `<p class="text-sm text-gray-500 dark:text-gray-400">${t('no_students_in_class')}</p>`}
             </div>
             <div class="flex flex-col sm:flex-row gap-2 border-t border-gray-200 dark:border-gray-700 pt-4">
-                <input type="text" id="new-student-name-${c.id}" placeholder="${t('add_student_placeholder')}" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md">
-                <button data-action="add-student-to-class" data-activity-id="${c.id}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex-shrink-0 flex items-center justify-center gap-2"><i data-lucide="plus" class="w-5 h-5 sm:hidden"></i><span class="hidden sm:inline">${t('add')}</span></button>
+                <input type="text" id="new-student-name-${c.id}" placeholder="${t('add_student_placeholder')}" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                <button data-action="add-student-to-class" data-activity-id="${c.id}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex-shrink-0 flex items-center justify-center gap-2 transition-colors"><i data-lucide="plus" class="w-5 h-5"></i><span class="hidden sm:inline">${t('add')}</span></button>
             </div>
         </div>
         `;
     }).join('');
 
     return `
-        <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50 min-h-full">
-            <h2 class="hidden sm:block text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6">${t('classes_view_title')}</h2>
+        <div class="p-4 sm:p-6 lg:p-8 min-h-full">
+            <h2 class="hidden sm:block text-3xl font-bold text-gray-800 dark:text-gray-200 mb-6">${t('classes_view_title')}</h2>
             <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 ${classesHtml}
             </div>
@@ -298,39 +300,42 @@ export function renderStudentDetailView() {
         : `<p class="text-gray-500 dark:text-gray-400">${t('no_session_notes')}</p>`;
 
     return `
-        <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50 min-h-full">
-            <div class="hidden sm:flex justify-between items-center mb-6 no-print">
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">${t('student_detail_view_title')}</h2>
-                <div class="flex items-center gap-2">
-                     <button data-action="export-student-docx" class="bg-blue-800 text-white px-4 py-2 rounded-md hover:bg-blue-900 flex items-center gap-2">
-                        <i data-lucide="file-text"></i> ${t('export_to_docx')}
-                    </button>
-                     <button data-action="print-student-sheet" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2">
-                        <i data-lucide="printer"></i> ${t('print')}
-                    </button>
-                    <button data-action="back-to-classes" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2">
-                        <i data-lucide="arrow-left"></i> ${t('back')}
-                    </button>
+        <div class="p-4 sm:p-6 lg:p-8 min-h-full">
+            <div id="student-sheet-content" class="printable-area max-w-4xl mx-auto">
+                <div class="flex justify-between items-start mb-6 no-print">
+                    <h2 class="text-3xl font-bold text-gray-800 dark:text-gray-200">${t('student_detail_view_title')}</h2>
+                    <div class="flex items-center gap-2">
+                        <button data-action="export-student-docx" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2 transition-colors">
+                            <i data-lucide="file-text" class="w-5 h-5"></i> <span>${t('export_to_docx')}</span>
+                        </button>
+                        <button data-action="print-student-sheet" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2 transition-colors">
+                            <i data-lucide="printer" class="w-5 h-5"></i> <span>${t('print')}</span>
+                        </button>
+                        <button data-action="back-to-classes" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2 transition-colors">
+                            <i data-lucide="arrow-left" class="w-5 h-5"></i> <span>${t('back')}</span>
+                        </button>
+                    </div>
                 </div>
-            </div>
-            <div id="student-sheet-content" class="printable-area bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-lg shadow-md max-w-4xl mx-auto">
-                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-6 print:block hidden">${student.name}</h2>
-                <div class="space-y-6">
-                    <div>
-                        <label for="edit-student-name" class="block text-sm font-medium text-gray-700 dark:text-gray-300">${t('student_name_label')}</label>
-                        <input type="text" id="edit-student-name" data-action="edit-student-name" data-student-id="${student.id}" value="${student.name}" class="mt-1 block w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                    </div>
-                    <div>
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-200 mb-2">${t('enrolled_classes_title')}</h3>
-                        <ul class="space-y-2">${classesHtml}</ul>
-                    </div>
-                    <div>
-                        <label for="edit-student-notes" class="block text-sm font-medium text-gray-700 dark:text-gray-300">${t('general_notes_label')}</label>
-                        <textarea id="edit-student-notes" data-action="edit-student-notes" data-student-id="${student.id}" placeholder="${t('general_notes_placeholder')}" class="mt-1 block w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 h-32">${student.generalNotes || ''}</textarea>
-                    </div>
-                    <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                        <h3 class="text-lg font-medium text-gray-900 dark:text-gray-200 mb-3">${t('session_notes_history_title')}</h3>
-                        <div class="space-y-4 max-h-[400px] overflow-y-auto pr-2">${annotationsHistoryHtml}</div>
+
+                <div class="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-8 print:block hidden">${student.name}</h2>
+                    <div class="space-y-8">
+                        <div>
+                            <label for="edit-student-name" class="block text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">${t('student_name_label')}</label>
+                            <input type="text" id="edit-student-name" data-action="edit-student-name" data-student-id="${student.id}" value="${student.name}" class="mt-1 block w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-base">
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">${t('enrolled_classes_title')}</h3>
+                            <ul class="space-y-2">${classesHtml}</ul>
+                        </div>
+                        <div>
+                            <label for="edit-student-notes" class="block text-lg font-bold text-gray-800 dark:text-gray-200 mb-2">${t('general_notes_label')}</label>
+                            <textarea id="edit-student-notes" data-action="edit-student-notes" data-student-id="${student.id}" placeholder="${t('general_notes_placeholder')}" class="mt-1 block w-full p-3 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md h-32 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition text-base">${student.generalNotes || ''}</textarea>
+                        </div>
+                        <div class="border-t border-gray-200 dark:border-gray-700 pt-8">
+                            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">${t('session_notes_history_title')}</h3>
+                            <div class="space-y-5 max-h-[400px] overflow-y-auto pr-3">${annotationsHistoryHtml}</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -460,67 +465,72 @@ export function renderSettingsView() {
         `
     }).join('');
 
+    const inputClasses = "w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition";
+    const labelClasses = "block text-sm font-medium text-gray-700 dark:text-gray-300";
+    const cardClasses = "bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700";
+    const h3Classes = "text-xl font-bold text-gray-800 dark:text-gray-200 mb-4";
+
     return `
-        <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50 min-h-full space-y-8">
-            <h2 class="hidden sm:block text-2xl font-bold text-gray-800 dark:text-gray-200">${t('settings_view_title')}</h2>
+        <div class="p-4 sm:p-6 lg:p-8 min-h-full">
+            <h2 class="hidden sm:block text-3xl font-bold text-gray-800 dark:text-gray-200 mb-8">${t('settings_view_title')}</h2>
             <div class="grid lg:grid-cols-2 gap-8 items-start">
                 <div class="space-y-8">
-                     <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3">${t('course_dates_title')}</h3>
+                     <div class="${cardClasses}">
+                        <h3 class="${h3Classes}">${t('course_dates_title')}</h3>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">${t('start_date')}</label>
-                                <input type="date" data-action="update-course-date" data-type="start" value="${state.courseStartDate}" class="mt-1 w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md">
+                                <label class="${labelClasses}">${t('start_date')}</label>
+                                <input type="date" data-action="update-course-date" data-type="start" value="${state.courseStartDate}" class="mt-1 ${inputClasses}">
                             </div>
                             <div>
-                                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300">${t('end_date')}</label>
-                                <input type="date" data-action="update-course-date" data-type="end" value="${state.courseEndDate}" class="mt-1 w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md">
+                                <label class="${labelClasses}">${t('end_date')}</label>
+                                <input type="date" data-action="update-course-date" data-type="end" value="${state.courseEndDate}" class="mt-1 ${inputClasses}">
                             </div>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3">${t('activities_management_title')}</h3>
+                    <div class="${cardClasses}">
+                        <h3 class="${h3Classes}">${t('activities_management_title')}</h3>
                         <div class="flex gap-2 mb-2">
-                            <input type="text" id="new-activity-name" placeholder="${t('activity_name_placeholder')}" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"/>
-                            <button data-action="add-activity" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i>${t('add')}</button>
+                            <input type="text" id="new-activity-name" placeholder="${t('activity_name_placeholder')}" class="flex-grow ${inputClasses}"/>
+                            <button data-action="add-activity" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"><i data-lucide="plus-circle" class="w-5 h-5"></i>${t('add')}</button>
                         </div>
                         <div class="flex gap-4 mb-4 text-sm">
-                            <label class="flex items-center gap-2"><input type="radio" name="activityType" value="class" checked class="form-radio text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"/>${t('activity_type_class')}</label>
-                            <label class="flex items-center gap-2"><input type="radio" name="activityType" value="general" class="form-radio text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"/>${t('activity_type_general')}</label>
+                            <label class="flex items-center gap-2"><input type="radio" name="activityType" value="class" checked class="form-radio text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-blue-500"/>${t('activity_type_class')}</label>
+                            <label class="flex items-center gap-2"><input type="radio" name="activityType" value="general" class="form-radio text-blue-600 bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600 focus:ring-blue-500"/>${t('activity_type_general')}</label>
                         </div>
                         <div class="space-y-3 max-h-96 overflow-y-auto pr-2">${activitiesHtml}</div>
                     </div>
-                     <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clipboard-paste" class="w-5 h-5"></i> ${t('quick_import_title')}</h3>
+                     <div class="${cardClasses}">
+                        <h3 class="${h3Classes} flex items-center gap-2"><i data-lucide="clipboard-paste" class="w-5 h-5"></i> ${t('quick_import_title')}</h3>
                         <div class="space-y-4">
-                            <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">${t('step1_select_class')}</label><select id="import-target-class" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"><option value="">${t('choose_a_class')}</option>${state.activities.filter(a => a.type === 'class').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
-                            <div><label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">${t('step2_paste_list')}</label><textarea id="student-list-text" placeholder="Juan Pérez\nMaría García\n..." class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md h-32"></textarea></div>
-                            <button data-action="import-students" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2"><i data-lucide="upload" class="w-5 h-5"></i> ${t('import_students')}</button>
+                            <div><label class="${labelClasses} mb-1">${t('step1_select_class')}</label><select id="import-target-class" class="${inputClasses}"><option value="">${t('choose_a_class')}</option>${state.activities.filter(a => a.type === 'class').map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select></div>
+                            <div><label class="${labelClasses} mb-1">${t('step2_paste_list')}</label><textarea id="student-list-text" placeholder="Juan Pérez\nMaría García\n..." class="${inputClasses} h-32"></textarea></div>
+                            <button data-action="import-students" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700 flex items-center justify-center gap-2 transition-colors"><i data-lucide="upload" class="w-5 h-5"></i> ${t('import_students')}</button>
                         </div>
                     </div>
                 </div>
                 <div class="space-y-8">
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="wand-2" class="w-5 h-5"></i> ${t('schedule_generator_title')}</h3>
+                    <div class="${cardClasses}">
+                        <h3 class="${h3Classes} flex items-center gap-2"><i data-lucide="wand-2" class="w-5 h-5"></i> ${t('schedule_generator_title')}</h3>
                         <div class="grid grid-cols-2 gap-4">
-                            <div><label class="block text-sm font-medium">${t('start_time')}</label><input type="time" id="gen-start-time" value="08:00" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"></div>
-                            <div><label class="block text-sm font-medium">${t('end_time')}</label><input type="time" id="gen-end-time" value="17:00" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"></div>
-                            <div><label class="block text-sm font-medium">${t('class_duration_min')}</label><input type="number" id="gen-class-duration" value="55" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"></div>
-                            <div><label class="block text-sm font-medium">${t('break_duration_min')}</label><input type="number" id="gen-break-duration" value="30" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"></div>
-                            <div class="col-span-2"><label class="block text-sm font-medium">${t('break_start_time_optional')}</label><input type="time" id="gen-break-start" value="11:00" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"></div>
+                            <div><label class="${labelClasses}">${t('start_time')}</label><input type="time" id="gen-start-time" value="08:00" class="${inputClasses}"></div>
+                            <div><label class="${labelClasses}">${t('end_time')}</label><input type="time" id="gen-end-time" value="17:00" class="${inputClasses}"></div>
+                            <div><label class="${labelClasses}">${t('class_duration_min')}</label><input type="number" id="gen-class-duration" value="55" class="${inputClasses}"></div>
+                            <div><label class="${labelClasses}">${t('break_duration_min')}</label><input type="number" id="gen-break-duration" value="30" class="${inputClasses}"></div>
+                            <div class="col-span-2"><label class="${labelClasses}">${t('break_start_time_optional')}</label><input type="time" id="gen-break-start" value="11:00" class="${inputClasses}"></div>
                         </div>
-                        <button data-action="generate-schedule-slots" class="mt-4 w-full bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center justify-center gap-2">${t('generate_slots')}</button>
+                        <button data-action="generate-schedule-slots" class="mt-4 w-full bg-teal-600 text-white px-4 py-2 rounded-md hover:bg-teal-700 flex items-center justify-center gap-2 transition-colors">${t('generate_slots')}</button>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3 flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> ${t('timeslots_management_title')}</h3>
+                    <div class="${cardClasses}">
+                        <h3 class="${h3Classes} flex items-center gap-2"><i data-lucide="clock" class="w-5 h-5"></i> ${t('timeslots_management_title')}</h3>
                         <div class="flex gap-2 mb-4">
-                            <input type="text" id="new-timeslot-label" placeholder="${t('timeslot_placeholder')}" class="flex-grow p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"/>
-                            <button data-action="add-timeslot" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2"><i data-lucide="plus-circle" class="w-5 h-5"></i>${t('add')}</button>
+                            <input type="text" id="new-timeslot-label" placeholder="${t('timeslot_placeholder')}" class="flex-grow ${inputClasses}"/>
+                            <button data-action="add-timeslot" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"><i data-lucide="plus-circle" class="w-5 h-5"></i>${t('add')}</button>
                         </div>
                         <div class="space-y-2">${timeSlotsHtml}</div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3">${t('weekly_schedule_config_title')}</h3>
+                    <div class="${cardClasses}">
+                        <h3 class="${h3Classes}">${t('weekly_schedule_config_title')}</h3>
                         <div class="overflow-x-auto">
                             <table class="w-full border-collapse text-sm">
                                 <thead><tr class="bg-gray-100 dark:bg-gray-900"><th class="p-2 border border-gray-200 dark:border-gray-700">${t('hour')}</th>${DAY_KEYS.map(day => `<th class="p-2 border border-gray-200 dark:border-gray-700">${t(day.toLowerCase())}</th>`).join('')}</tr></thead>
@@ -528,25 +538,26 @@ export function renderSettingsView() {
                             </table>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-lg font-semibold mb-3">${t('schedule_overrides_title')}</h3>
+                    <div class="${cardClasses}">
+                        <h3 class="${h3Classes}">${t('schedule_overrides_title')}</h3>
                         <div class="space-y-4">
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label class="block text-sm font-medium">${t('day')}</label><select id="override-day" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md">${DAY_KEYS.map(day => `<option value="${day}">${t(day.toLowerCase())}</option>`).join('')}</select></div>
-                                <div><label class="block text-sm font-medium">${t('timeslot')}</label><select id="override-time" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md">${state.timeSlots.map(t => `<option>${t.label}</option>`).join('')}</select></div>
+                                <div><label class="${labelClasses}">${t('day')}</label><select id="override-day" class="${inputClasses}">${DAY_KEYS.map(day => `<option value="${day}">${t(day.toLowerCase())}</option>`).join('')}</select></div>
+                                <div><label class="${labelClasses}">${t('timeslot')}</label><select id="override-time" class="${inputClasses}">${state.timeSlots.map(t => `<option>${t.label}</option>`).join('')}</select></div>
                             </div>
-                            <div><label class="block text-sm font-medium">${t('replace_with')}</label><select id="override-activity" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md">${state.activities.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}</select></div>
+                            <div><label class="${labelClasses}">${t('replace_with')}</label><select id="override-activity" class="${inputClasses}">${state.activities.map(a => `<option value="${a.id}">${a.name}</option>`).join('')}</select></div>
                             <div class="grid grid-cols-2 gap-4">
-                                <div><label class="block text-sm font-medium">${t('from_date')}</label><input type="date" id="override-start-date" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"></div>
-                                <div><label class="block text-sm font-medium">${t('until_date')}</label><input type="date" id="override-end-date" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md"></div>
+                                <div><label class="${labelClasses}">${t('from_date')}</label><input type="date" id="override-start-date" class="${inputClasses}"></div>
+                                <div><label class="${labelClasses}">${t('until_date')}</label><input type="date" id="override-end-date" class="${inputClasses}"></div>
                             </div>
-                            <button data-action="add-schedule-override" class="w-full bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600">${t('add_override')}</button>
+                            <button data-action="add-schedule-override" class="w-full bg-orange-500 text-white px-4 py-2 rounded-md hover:bg-orange-600 transition-colors">${t('add_override')}</button>
                         </div>
                         <div class="mt-6 space-y-2">${scheduleOverridesHtml}</div>
                     </div>
-                    <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-400 p-4 rounded-r-lg">
-                        <h3 class="text-lg font-semibold text-red-800 dark:text-red-300 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> ${t('danger_zone_title')}</h3>
-                        <button data-action="delete-all-data" class="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center gap-2"><i data-lucide="trash-2" class="w-5 h-5"></i> ${t('delete_all_data')}</button>
+                    <div class="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 rounded-r-lg">
+                        <h3 class="text-lg font-semibold text-red-800 dark:text-red-200 flex items-center gap-2"><i data-lucide="alert-triangle" class="w-5 h-5"></i> ${t('danger_zone_title')}</h3>
+                        <p class="mt-2 text-sm text-red-700 dark:text-red-300">${t('delete_all_data_confirm_text')}</p>
+                        <button data-action="delete-all-data" class="mt-4 w-full bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 flex items-center justify-center gap-2 transition-colors"><i data-lucide="trash-2" class="w-5 h-5"></i> ${t('delete_all_data')}</button>
                     </div>
                 </div>
             </div>
@@ -566,40 +577,56 @@ export function renderActivityDetailView() {
 
     const annotationsHtml = studentsInClass.length > 0 ? studentsInClass.map(student => `
         <div key="${student.id}">
-            <button data-action="select-student" data-student-id="${student.id}" class="text-left font-medium text-blue-600 dark:text-blue-400 hover:underline w-full">${student.name}</button>
-            <textarea data-action="annotation-change" data-student-id="${student.id}" placeholder="${t('student_notes_placeholder')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 rounded-md mt-1 h-24">${entry.annotations?.[student.id] || ''}</textarea>
+            <label class="font-semibold text-lg text-gray-800 dark:text-gray-200">${student.name}</label>
+            <button data-action="select-student" data-student-id="${student.id}" class="text-sm text-blue-600 dark:text-blue-400 hover:underline ml-2">(${t('view_student_file')})</button>
+            <textarea data-action="annotation-change" data-student-id="${student.id}" placeholder="${t('student_notes_placeholder')}" class="w-full p-3 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg mt-2 h-32 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">${entry.annotations?.[student.id] || ''}</textarea>
         </div>
     `).join('') : `<p class="text-gray-500 dark:text-gray-400">${t('no_students_assigned')}</p>`;
     
     const prevSession = findPreviousSession(activityId, new Date(date));
     const nextSession = findNextSession(activityId, new Date(date));
+    const nextSessionToday = findNextSessionOfTheDay(activityId, date, time);
 
-    const prevButton = prevSession ? `<button data-action="navigate-to-session" data-activity-id="${activityId}" data-day="${prevSession.day}" data-time="${prevSession.time}" data-date="${prevSession.date}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2"><i data-lucide="arrow-left"></i> ${t('previous_session')}</button>` : `<button class="bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 px-4 py-2 rounded-md cursor-not-allowed flex items-center gap-2" disabled><i data-lucide="arrow-left"></i> ${t('previous_session')}</button>`;
-    const nextButton = nextSession ? `<button data-action="navigate-to-session" data-activity-id="${activityId}" data-day="${nextSession.day}" data-time="${nextSession.time}" data-date="${nextSession.date}" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 flex items-center gap-2">${t('next_session')} <i data-lucide="arrow-right"></i></button>` : `<button class="bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 px-4 py-2 rounded-md cursor-not-allowed flex items-center gap-2" disabled>${t('next_session')} <i data-lucide="arrow-right"></i></button>`;
+    const prevButton = prevSession ? `<button data-action="navigate-to-session" data-activity-id="${activityId}" data-day="${prevSession.day}" data-time="${prevSession.time}" data-date="${prevSession.date}" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors"><i data-lucide="arrow-left"></i> ${t('previous_session')}</button>` : `<button class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 px-4 py-2 rounded-md cursor-not-allowed flex items-center gap-2" disabled><i data-lucide="arrow-left"></i> ${t('previous_session')}</button>`;
+    const nextButton = nextSession ? `<button data-action="navigate-to-session" data-activity-id="${activityId}" data-day="${nextSession.day}" data-time="${nextSession.time}" data-date="${nextSession.date}" class="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2 transition-colors">${t('next_session')} <i data-lucide="arrow-right"></i></button>` : `<button class="bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500 px-4 py-2 rounded-md cursor-not-allowed flex items-center gap-2" disabled>${t('next_session')} <i data-lucide="arrow-right"></i></button>`;
+    const nextTodayButton = nextSessionToday ? `<button data-action="navigate-to-session" data-activity-id="${activityId}" data-day="${nextSessionToday.day}" data-time="${nextSessionToday.time}" data-date="${nextSessionToday.date}" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors">${t('next_session_today')} <i data-lucide="corner-down-right"></i></button>` : `<button class="bg-blue-500 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors opacity-50 cursor-not-allowed" disabled>${t('next_session_today')} <i data-lucide="corner-down-right"></i></button>`;
 
 
     return `
-        <div class="p-4 sm:p-6 bg-gray-50 dark:bg-gray-900/50 min-h-full">
-            <div class="hidden sm:flex justify-between items-center mb-2">
-                <div>
-                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">${name}</h2>
-                    <p class="text-gray-500 dark:text-gray-400">${t(day.toLowerCase())}, ${new Date(date + 'T00:00:00').toLocaleDateString(document.documentElement.lang, {day: 'numeric', month: 'long', year: 'numeric'})} (${time})</p>
+        <div class="p-4 sm:p-6 lg:p-8 min-h-full">
+            <div class="max-w-4xl mx-auto">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h2 class="text-3xl font-bold text-gray-800 dark:text-gray-200">${name}</h2>
+                        <p class="text-lg text-gray-500 dark:text-gray-400 mt-1">${t(day.toLowerCase())}, ${new Date(date + 'T00:00:00').toLocaleDateString(document.documentElement.lang, {day: 'numeric', month: 'long', year: 'numeric'})} (${time})</p>
+                    </div>
+                    <button data-action="back-to-schedule" class="hidden sm:flex items-center gap-2 bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">
+                        <i data-lucide="arrow-left"></i>
+                        <span>${t('back_to_schedule')}</span>
+                    </button>
                 </div>
-                <button data-action="back-to-schedule" class="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 px-4 py-2 rounded-md hover:bg-gray-300 dark:hover:bg-gray-600">${t('back_to_schedule')}</button>
-            </div>
-             <p class="sm:hidden text-gray-500 dark:text-gray-400 mb-4">${t(day.toLowerCase())}, ${new Date(date + 'T00:00:00').toLocaleDateString(document.documentElement.lang, {day: 'numeric', month: 'long', year: 'numeric'})} (${time})</p>
-            <div class="flex justify-between items-center mb-6">
-                ${prevButton}
-                ${nextButton}
-            </div>
-            <div class="grid md:grid-cols-2 gap-6">
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md space-y-4">
-                    <div><label class="block text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">${t('planning_for_today')}</label><textarea data-action="planned-change" placeholder="${t('planning_placeholder')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md h-32">${entry.planned || ''}</textarea></div>
-                    <div><label class="block text-lg font-semibold mb-2 text-gray-700 dark:text-gray-300">${t('summary_of_session')}</label><textarea data-action="completed-change" placeholder="${t('summary_placeholder')}" class="w-full p-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 rounded-md h-32">${entry.completed || ''}</textarea></div>
+
+                <div class="flex justify-between items-center my-8">
+                    ${prevButton}
+                    <div class="flex items-center gap-2">
+                        ${nextTodayButton}
+                        ${nextButton}
+                    </div>
                 </div>
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                    <h3 class="text-lg font-semibold mb-3">${t('student_annotations_title')}</h3>
-                    <div class="space-y-4 max-h-96 overflow-y-auto pr-2">${annotationsHtml}</div>
+
+                <div class="space-y-10">
+                    <div>
+                        <label class="block text-xl font-bold mb-3 text-gray-800 dark:text-gray-200">${t('planning_for_today')}</label>
+                        <textarea data-action="planned-change" placeholder="${t('planning_placeholder')}" class="w-full p-4 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg h-48 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">${entry.planned || ''}</textarea>
+                    </div>
+                    <div>
+                        <label class="block text-xl font-bold mb-3 text-gray-800 dark:text-gray-200">${t('summary_of_session')}</label>
+                        <textarea data-action="completed-change" placeholder="${t('summary_placeholder')}" class="w-full p-4 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg h-48 text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">${entry.completed || ''}</textarea>
+                    </div>
+                    <div>
+                        <h3 class="text-xl font-bold mb-4 text-gray-800 dark:text-gray-200">${t('student_annotations_title')}</h3>
+                        <div class="space-y-6">${annotationsHtml}</div>
+                    </div>
                 </div>
             </div>
         </div>

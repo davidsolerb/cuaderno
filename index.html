@@ -35,34 +35,38 @@
     </div>
   </div>
 
-  <div class="flex min-h-screen sm:h-auto">
+  <div id="app-container" class="flex min-h-screen sm:h-auto">
     <!-- Sidebar -->
-    <div id="sidebar" class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform -translate-x-full sm:relative sm:translate-x-0 transition-transform duration-300 ease-in-out">
+    <div id="sidebar"
+      class="fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 transform -translate-x-full sm:relative sm:translate-x-0 transition-all duration-300 ease-in-out">
       <div class="flex flex-col h-full">
         <div class="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-          <h1 class="text-xl font-bold hidden sm:block">Cuaderno del Profesor</h1>
-          <h1 class="text-lg font-bold sm:hidden">Cuaderno</h1>
+          <h1 class="text-xl font-bold sidebar-text">Cuaderno del Profesor</h1>
           <button id="close-sidebar-btn" class="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 sm:hidden">
             <i data-lucide="x" class="w-5 h-5"></i>
           </button>
         </div>
 
         <nav class="flex-1 px-4 py-4 space-y-2">
-          <button data-view="schedule" class="nav-button flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button data-view="schedule"
+            class="nav-button flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
             <i data-lucide="calendar" class="w-5 h-5 mr-3"></i>
-            <span data-i18n-key="schedule_view_title">Horario</span>
+            <span class="sidebar-text" data-i18n-key="schedule_view_title">Horario</span>
           </button>
-          <button data-view="classes" class="nav-button flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button data-view="classes"
+            class="nav-button flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
             <i data-lucide="users" class="w-5 h-5 mr-3"></i>
-            <span data-i18n-key="classes_view_title">Clases</span>
+            <span class="sidebar-text" data-i18n-key="classes_view_title">Clases</span>
           </button>
-          <button data-view="settings" class="nav-button flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+          <button data-view="settings"
+            class="nav-button flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
             <i data-lucide="settings" class="w-5 h-5 mr-3"></i>
-            <span data-i18n-key="settings_view_title">Configuración</span>
+            <span class="sidebar-text" data-i18n-key="settings_view_title">Configuración</span>
           </button>
-          <a href="manual.html" class="flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+          <a href="manual.html"
+            class="flex items-center w-full px-4 py-3 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
             <i data-lucide="help-circle" class="w-5 h-5 mr-3"></i>
-            <span data-i18n-key="manual_link">Manual</span>
+            <span class="sidebar-text" data-i18n-key="manual_link">Manual</span>
           </a>
         </nav>
 
@@ -79,12 +83,20 @@
             </button>
           </div>
         </div>
+
+        <div class="p-2 border-t border-gray-200 dark:border-gray-700">
+          <button id="desktop-collapse-btn"
+            class="hidden sm:flex items-center justify-center w-full p-2 text-left rounded-md transition-colors hover:bg-gray-100 dark:hover:bg-gray-700">
+            <i data-lucide="chevrons-left" class="w-5 h-5"></i>
+          </button>
+        </div>
+
       </div>
     </div>
 
     <div id="sidebar-overlay" class="fixed inset-0 bg-black bg-opacity-50 z-40 sm:hidden hidden"></div>
 
-    <div class="flex-1 flex flex-col overflow-hidden">
+    <div id="main-container" class="flex-1 flex flex-col overflow-hidden transition-all duration-300 ease-in-out">
       <main id="main-content" class="flex-1 overflow-auto p-4 sm:p-6"></main>
     </div>
   </div>

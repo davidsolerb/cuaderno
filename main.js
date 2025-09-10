@@ -11,8 +11,10 @@ const navButtons = document.querySelectorAll('.nav-button');
 const sidebar = document.getElementById('sidebar');
 const openSidebarBtn = document.getElementById('open-sidebar-btn');
 const closeSidebarBtn = document.getElementById('close-sidebar-btn');
+const desktopCollapseBtn = document.getElementById('desktop-collapse-btn');
 const sidebarOverlay = document.getElementById('sidebar-overlay');
 const mobileHeaderTitle = document.getElementById('mobile-header-title');
+const appContainer = document.getElementById('app-container');
 const themeSwitcherBtns = document.querySelectorAll('.theme-switcher');
 const offlineBanner = document.getElementById('offline-banner');
 
@@ -271,6 +273,11 @@ async function initializeApp() {
     openSidebarBtn.addEventListener('click', () => toggleSidebar(true));
     closeSidebarBtn.addEventListener('click', () => toggleSidebar(false));
     sidebarOverlay.addEventListener('click', () => toggleSidebar(false));
+
+    desktopCollapseBtn.addEventListener('click', () => {
+        const isCollapsed = appContainer.classList.toggle('sidebar-collapsed');
+        localStorage.setItem('sidebarCollapsed', isCollapsed);
+    });
     
     themeSwitcherBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -291,6 +298,11 @@ async function initializeApp() {
             sidebarOverlay.classList.add('hidden');
         }
     });
+
+    // Restore sidebar collapsed state
+    if (localStorage.getItem('sidebarCollapsed') === 'true') {
+        appContainer.classList.add('sidebar-collapsed');
+    }
 }
 
 init();

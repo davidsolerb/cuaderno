@@ -50,6 +50,7 @@
   "no_students_assigned": "No hi ha alumnat assignat a aquesta classe.",
   "previous_session": "Sessió anterior",
   "next_session": "Sessió següent",
+  "next_session_today": "Següent del dia",
   "student_notes_placeholder": "Comportament, dubtes, feina...",
   "settings_view_title": "Configuració General",
   "course_dates_title": "Dates del Curs Acadèmic",
